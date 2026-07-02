@@ -28,6 +28,8 @@ public class BlackoutSimulationController : MonoBehaviour
     private bool                       _isOn;
     private bool                       _waitingForFinish;
 
+    public bool IsSimulating => _isOn;
+
     private void Awake()
     {
         SceneRefs.Resolve(ref dataManager);
