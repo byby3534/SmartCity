@@ -313,6 +313,10 @@ Unity/ElninoEnergyRiskSimulation/Assets/Scenes/Test
 Unity/ElninoEnergyRiskSimulation/Assets/Scripts/Test
 /Unity/ElninoEnergyRiskSimulation/Assets/Resources/Districts
 
+# WebGL build output
+/www/*
+!www/.gitkeep
+
 # Unity crash logs
 *.blob
 mono_crash.*

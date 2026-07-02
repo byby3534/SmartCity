@@ -8,9 +8,33 @@ using UnityEngine.Networking;
 public class ApiClient : MonoBehaviour
 {
     [Header("서버 설정")]
+    [Tooltip("에디터: http://localhost:5001 | WebGL 배포: /api (nginx same-origin)")]
     public string serverUrl = "http://localhost:5001";
 
     public event Action<string> OnError;
+
+    private void Awake()
+    {
+        serverUrl = ResolveServerUrl(serverUrl);
+    }
+
+    /// <summary>
+    /// WebGL 빌드는 nginx /api 프록시를 사용한다. 에디터는 localhost 직접 호출.
+    /// </summary>
+    private static string ResolveServerUrl(string configured)
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if (string.IsNullOrWhiteSpace(configured) || configured == "http://localhost:5001")
+            return "/api";
+#endif
+        return configured.TrimEnd('/');
+    }
+
+    private string ApiUrl(string path)
+    {
+        string normalizedPath = path.StartsWith('/') ? path : $"/{path}";
+        return $"{serverUrl}{normalizedPath}";
+    }
 
     // -----------------------------------------------------------------------
     // 외부 호출 진입점
@@ -18,26 +42,26 @@ public class ApiClient : MonoBehaviour
 
     public void FetchHealth(Action<JObject> onSuccess)
     {
-        StartCoroutine(GetJObject($"{serverUrl}/health", onSuccess));
+        StartCoroutine(GetJObject(ApiUrl("/health"), onSuccess));
     }
 
     public void FetchOni(int year, int month, Action<JObject> onSuccess)
     {
-        string url = $"{serverUrl}/oni?year={year}&month={month}";
+        string url = ApiUrl($"/oni?year={year}&month={month}");
         StartCoroutine(GetJObject(url, onSuccess));
     }
 
     // ONI 슬라이더 조정시 발생되는 API
     public void FetchPredict(int year, int month, float oni, Action<JObject> onSuccess)
     {
-        string url = $"{serverUrl}/predict?year={year}&month={month}&oni={oni}";
+        string url = ApiUrl($"/predict?year={year}&month={month}&oni={oni}");
         StartCoroutine(GetJObject(url, onSuccess));
     }
 
     // 차트용
     public void FetchOniRange(int year, int month, Action<JObject> onSuccess)
     {
-        string url = $"{serverUrl}/predict/oni_range?year={year}&month={month}";
+        string url = ApiUrl($"/predict/oni_range?year={year}&month={month}");
         StartCoroutine(GetJObject(url, onSuccess));
     }
     
@@ -45,13 +69,13 @@ public class ApiClient : MonoBehaviour
     public void FetchBlackoutSimulation(int year, int month, float oni, Action<JObject> onSuccess)
     {
         string body = $"{{\"year\":{year},\"month\":{month},\"oni\":{oni}}}";
-        StartCoroutine(Post($"{serverUrl}/blackout_simulation", body, onSuccess));
+        StartCoroutine(Post(ApiUrl("/blackout_simulation"), body, onSuccess));
     }
 
-    // 현재 기온 - 0630 예정 추가
+    // 현재 기온
     public void FetchCurrentWeather(Action<JObject> onSuccess)
     {
-        StartCoroutine(GetJObject($"{serverUrl}/weather/current", onSuccess));
+        StartCoroutine(GetJObject(ApiUrl("/weather/current"), onSuccess));
     }
 
 
