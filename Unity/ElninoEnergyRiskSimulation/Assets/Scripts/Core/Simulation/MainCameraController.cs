@@ -48,6 +48,9 @@ public class MainCameraController : MonoBehaviour
             mainCamera = Camera.main;
         }
 
+        SceneRefs.Resolve(ref minimapManager);
+        SceneRefs.Resolve(ref simulationController);
+
         // 메인 카메라에 CesiumGlobeAnchor가 없으면 경고
         if (mainCamera != null)
         {
@@ -72,14 +75,17 @@ public class MainCameraController : MonoBehaviour
     // 클릭시 해당 구로 카메라 이동
     private void OnEnable()
     {
-        if (minimapManager != null)
-            minimapManager.OnDistrictSelected += MoveToClickedDistrict;
-
-        if (simulationController != null)
+        if (!SceneRefs.RequireAll(this,
+        (minimapManager, nameof(minimapManager)),
+        (simulationController, nameof(simulationController))
+        ))
         {
-            simulationController.OnBlackoutDistrictChanged += MoveToBlackoutDistrict;
-            simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+            return;
         }
+        
+        minimapManager.OnDistrictSelected += MoveToClickedDistrict;
+        simulationController.OnBlackoutDistrictChanged += MoveToBlackoutDistrict;
+        simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
     }
 
     private void OnDisable()

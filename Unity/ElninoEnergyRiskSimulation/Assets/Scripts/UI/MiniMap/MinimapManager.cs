@@ -77,18 +77,20 @@ public class MinimapManager : MonoBehaviour
 
     private void Awake()
     {
-        // MainCameraController를 찾아 저장
-        // : 구 클릭할 때 메인 카메라를 해당 구로 이동하기 위해 참조 저장
-        mainCameraController = FindFirstObjectByType<MainCameraController>();
-
-        if (mainCameraController == null)
-        {
-            Debug.LogError("[MinimapManager] MainCameraController를 찾을 수 없습니다.");
-        }
+        SceneRefs.Resolve(ref mainCameraController);
     }
 
     private void Start()
     {
+        if (!SceneRefs.RequireAll(this,
+        (districtRoot, nameof(districtRoot)),
+        (mainCameraController, nameof(mainCameraController))
+        ))
+        {
+            return;
+        }
+
+        
         LoadGeoJson();
         CreateDistricts();
 
