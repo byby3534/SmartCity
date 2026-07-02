@@ -7,6 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 순환단전 시뮬레이션 시작/중단 버튼.
 /// ONI 패널이 열릴 때만 표시되며, 심각 단계(예비율 5% 미만)에서만 활성(빨간색)된다.
+/// /predict(OnPowerDataUpdated)로 즉시 반영, oni_range는 슬라이더 보간용 보충.
 /// </summary>
 public class RollingBlackoutStartButton : MonoBehaviour
 {
@@ -21,6 +22,7 @@ public class RollingBlackoutStartButton : MonoBehaviour
     private readonly List<OniRangeData> _oniRangeEntries = new();
 
     private int _currentLevel = -1;
+    private bool _hasReceivedData;
     private bool _oniPanelVisible;
     private bool _simOn;
     private bool _simCompleted;
@@ -48,7 +50,10 @@ public class RollingBlackoutStartButton : MonoBehaviour
     private void Start()
     {
         if (dataManager != null)
+        {
+            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
+        }
 
         if (uiController != null)
         {
@@ -66,7 +71,10 @@ public class RollingBlackoutStartButton : MonoBehaviour
     private void OnDestroy()
     {
         if (dataManager != null)
+        {
+            dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
+        }
         if (uiController != null)
         {
             uiController.OnOniValueChanged -= HandleOniSliderChanged;
@@ -95,21 +103,38 @@ public class RollingBlackoutStartButton : MonoBehaviour
         RefreshVisual();
     }
 
+    private void HandlePowerDataUpdated(PowerGridData data)
+    {
+        if (data == null || _simOn)
+            return;
+
+        _hasReceivedData = true;
+        _currentLevel = ReserveRateStagePalette.ToLevel(data.reserveRate);
+        RefreshVisual();
+    }
+
     private void HandleOniRangeDataUpdated(List<OniRangeData> data)
     {
         _oniRangeEntries.Clear();
 
         if (data == null || data.Count == 0)
         {
-            _currentLevel = -1;
-            RefreshVisual();
+            if (!_hasReceivedData)
+            {
+                _currentLevel = -1;
+                RefreshVisual();
+            }
             return;
         }
 
         _oniRangeEntries.AddRange(data);
 
+        if (_simOn)
+            return;
+
         float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
-        ApplyOniValue(oni);
+        if (!_hasReceivedData)
+            ApplyOniValue(oni);
     }
 
     private void HandleOniSliderChanged(float oniValue)

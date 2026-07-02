@@ -297,8 +297,15 @@ public class DataManager : MonoBehaviour
             float seoulTotal = 0f;
             foreach (JToken regionToken in regionsForTotal)
             {
-                if (regionToken["total_consumption_mwh"] != null)
-                    seoulTotal += regionToken["total_consumption_mwh"].Value<float>();
+                if (regionToken["total_consumption_mwh"] == null)
+                    continue;
+
+                float consumption = regionToken["total_consumption_mwh"].Value<float>();
+                seoulTotal += consumption;
+
+                string guName = regionToken["gu"]?.Value<string>();
+                if (!string.IsNullOrEmpty(guName))
+                    powerGridData.guConsumption[guName] = consumption;
             }
             powerGridData.seoulTotalConsumption = seoulTotal;
         }

@@ -19,6 +19,10 @@ public class InfoPanelUI : MonoBehaviour
     [SerializeField] private DataManager dataManager;
     [SerializeField] private UIController uiController;
     [SerializeField] private MinimapManager minimapManager;
+    [SerializeField] private BlackoutSimulationController simulationController;
+
+    [Header("시뮬레이션 회복")]
+    [SerializeField] private float simulationFullRecoveryRatio = 0.30f;
 
     private bool _hasPredictContext;
     private PowerGridData _latestPowerData;
@@ -28,15 +32,18 @@ public class InfoPanelUI : MonoBehaviour
     private string cachedTemperatureText;
     private string cachedEmergencyStage;
     private int _currentStageLevel = -1;
+    private bool _simOn;
+    private float _recoveredConsumption;
+    private float _simStartReserveRate;
 
     private float _currentReserveRate = ReserveRateStagePalette.DefaultReserveRate;
 
     private void Awake()
     {
-            // 씬에 하나만 있는 매니저들은 비어 있으면 자동으로 찾기
         SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref uiController);
         SceneRefs.Resolve(ref minimapManager);
-
+        SceneRefs.Resolve(ref simulationController);
 
         ResolveReferences();
         ApplyReserveStage(_currentReserveRate, force: true);
@@ -45,20 +52,26 @@ public class InfoPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnCurrentTempDataUpdated += HandleCurrentTempUpdated;
-            dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
-            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
-            dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
-            dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
-        }
+        if (!SceneRefs.RequireAll(this,
+                (dataManager, nameof(dataManager)),
+                (uiController, nameof(uiController)),
+                (minimapManager, nameof(minimapManager)),
+                (simulationController, nameof(simulationController))))
+            return;
 
-        if (uiController != null)
-            uiController.OnOniValueChanged += HandleOniValueChanged;
+        dataManager.OnCurrentTempDataUpdated += HandleCurrentTempUpdated;
+        dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
+        dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
+        dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
+        dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
 
-        if (minimapManager != null)
-            minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        uiController.OnOniValueChanged += HandleOniValueChanged;
+
+        minimapManager.OnDistrictSelected += HandleDistrictSelected;
+
+        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
+        simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
+        simulationController.OnSimulationCompleted += HandleSimCompleted;
     }
 
     private void OnDisable()
@@ -77,6 +90,13 @@ public class InfoPanelUI : MonoBehaviour
 
         if (minimapManager != null)
             minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
+            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
+            simulationController.OnSimulationCompleted -= HandleSimCompleted;
+        }
     }
 
     private void HandleCurrentTempUpdated(JObject weather)
@@ -138,7 +158,7 @@ public class InfoPanelUI : MonoBehaviour
 
         _oniRangeEntries.AddRange(data);
 
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
+        float oni = uiController.GetCurrentOni();
         ApplyReserveStage(GetClosestOniEntry(oni)?.reserveRate ?? ReserveRateStagePalette.DefaultReserveRate);
 
         if (_hasPredictContext)
@@ -147,6 +167,9 @@ public class InfoPanelUI : MonoBehaviour
 
     private void HandleOniValueChanged(float oniValue)
     {
+        if (_simOn)
+            return;
+
         if (_oniRangeEntries.Count == 0)
             return;
 
@@ -174,6 +197,43 @@ public class InfoPanelUI : MonoBehaviour
 
         if (data.districtType == _selectedDistrict)
             SetSimulationTemperature(data.districtType, data.temperature);
+    }
+
+    private void HandleSimToggled(bool isOn)
+    {
+        _simOn = isOn;
+
+        if (isOn)
+        {
+            _recoveredConsumption = 0f;
+            _simStartReserveRate = _latestPowerData?.reserveRate
+                ?? ReserveRateStagePalette.DefaultReserveRate;
+        }
+        else
+        {
+            float reserveRate = _latestPowerData?.reserveRate
+                ?? ReserveRateStagePalette.DefaultReserveRate;
+            ApplyReserveStage(reserveRate, force: true);
+        }
+    }
+
+    private void HandleDistrictBlackedOut(DistrictType districtType, double consumption)
+    {
+        if (!_simOn || _latestPowerData == null || _latestPowerData.seoulTotalConsumption <= 0f)
+            return;
+
+        _recoveredConsumption += (float)consumption;
+        float recoveryRatio = Mathf.Clamp01(
+            _recoveredConsumption / (_latestPowerData.seoulTotalConsumption * simulationFullRecoveryRatio));
+
+        float displayRate = Mathf.Lerp(
+            _simStartReserveRate, ReserveRateStagePalette.Thresholds[0], recoveryRatio);
+        ApplyReserveStage(displayRate, force: true);
+    }
+
+    private void HandleSimCompleted()
+    {
+        _simOn = false;
     }
 
     private void ApplyReserveStage(float reserveRate, bool force = false)
@@ -229,7 +289,7 @@ public class InfoPanelUI : MonoBehaviour
             return;
         }
 
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
+        float oni = uiController.GetCurrentOni();
         RefreshSimulationTemperatureFromOniRange(oni);
     }
 
@@ -271,9 +331,6 @@ public class InfoPanelUI : MonoBehaviour
 
     private bool HasSimulationDateSelected()
     {
-        if (uiController == null)
-            return false;
-
         return !string.IsNullOrEmpty(uiController.GetSelectedYear())
             && !string.IsNullOrEmpty(uiController.GetSelectedMonth());
     }

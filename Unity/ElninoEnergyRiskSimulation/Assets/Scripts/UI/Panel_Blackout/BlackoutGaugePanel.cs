@@ -269,7 +269,19 @@ public class BlackoutGaugePanel : MonoBehaviour
             _recoveredConsumption / (_seoulTotal * simulationFullRecoveryRatio));
 
         float targetAngle = Mathf.Lerp(_simStartNeedleAngle, SegmentStart(0), recoveryRatio);
+        ApplySimulationRecoveryVisuals(recoveryRatio, targetAngle);
         MoveNeedleTo(targetAngle, instant: false);
+    }
+
+    private void ApplySimulationRecoveryVisuals(float recoveryRatio, float targetAngle)
+    {
+        int recoveryLevel = AngleToLevel(targetAngle);
+        _currentLevel = recoveryLevel;
+
+        float displayRate = Mathf.Lerp(
+            _lastReserveRate, ReserveRateStagePalette.Thresholds[0], recoveryRatio);
+        SetReserveRateLabel(displayRate);
+        _powerStatusPanel?.ApplyReserveRate(displayRate, force: true);
     }
 
     private void HandleSimCompleted()
@@ -313,7 +325,10 @@ public class BlackoutGaugePanel : MonoBehaviour
         {
             StopNeedleAnimation();
             SetNeedleAngle(angle);
-            UpdateSegmentsForNeedle(angle, _currentLevel);
+            int level = _simOn ? AngleToLevel(angle) : _currentLevel;
+            if (_simOn)
+                _currentLevel = level;
+            UpdateSegmentsForNeedle(angle, level);
         }
         else
         {
@@ -352,7 +367,9 @@ public class BlackoutGaugePanel : MonoBehaviour
             if (Mathf.Abs(NormalizeAngle(next - target)) < 0.05f)
             {
                 SetNeedleAngle(target);
-                UpdateSegmentsForNeedle(target, _currentLevel);
+                int levelAtTarget = AngleToLevel(target);
+                _currentLevel = levelAtTarget;
+                UpdateSegmentsForNeedle(target, levelAtTarget);
                 _needleCoroutine = null;
                 yield break;
             }

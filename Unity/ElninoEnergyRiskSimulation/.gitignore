@@ -80,5 +80,4 @@ crashlytics-build.properties
 *.blob
 mono_crash.*
 
-/Assets/Plugins
 /Assets/Resources

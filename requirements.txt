@@ -14,11 +14,11 @@ contextily
 # ML / modeling
 scikit-learn
 xgboost
-shap
 
 # API
 flask
 python-dotenv
+gunicorn
 
 # Visualization
 matplotlib
