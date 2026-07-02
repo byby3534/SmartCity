@@ -1,14 +1,8 @@
 using CesiumForUnity;
-using Codice.CM.Client.Differences.Graphic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -60,37 +54,40 @@ public class BuildingManager : MonoBehaviour
     public Material buildingMaterial;
     private ComputeBuffer renderBuffer;
 
-    // ── 렌더링 버퍼 캐시 (C++ renderingBuffer의 C# 사본) ──
-    private BuildingRenderData[] _cachedRenderData;
-    private bool _bufferDirty;
+    private BuildingRenderData[] cachedRenderData;
+    private bool bufferDirty;
 
-    private Dictionary<int, List<int>> _districtBuildingIndices = new Dictionary<int, List<int>>();
+    private Dictionary<int, (int start, int count)> districtRanges = new();
 
-    // DistirctObject 생성 시 이벤트(DistrictManager에 등록용)
     public event Action<DistrictObject> OnDistrictObjectCreated;
 
-    /// <summary>
-    /// GPU에 올라갈 BuildingRenderData 배열.
-    /// DistrictManager 등 외부에서 reductionValue를 수정할 때 사용.
-    /// 수정 후 MarkBufferDirty() → FlushBufferToGPU() 호출 필요.
-    /// </summary>
-    public BuildingRenderData[] CachedRenderData => _cachedRenderData;
+    public BuildingRenderData[] CachedRenderData => cachedRenderData;
 
-    /// <summary>
-    /// 캐시 데이터가 변경되었음을 표시.
-    /// </summary>
-    public void MarkBufferDirty() => _bufferDirty = true;
+    public void MarkBufferDirty() => bufferDirty = true;
 
-    /// <summary>
-    /// 변경된 캐시를 GPU ComputeBuffer에 업로드한다.
-    /// </summary>
+    private Dictionary<int, int[]> sortedDistrictIndices = new();
+    private Dictionary<int, GameObject> districtRoots = new();
+
+    [Header("정전 연출 설정")]
+    [SerializeField] private int buildingsPerBatch = 100;
+    [SerializeField] private float secondsBetweenBatch = 0.05f;
+    [SerializeField] private float blackoutHoldDuration = 3.0f;
+    [SerializeField] private float secondsBetweenRestoreBatch = 0.03f;
+    private Coroutine blackoutCoroutine;
+
+    [Header("구 선택")]
+    [SerializeField] private MinimapManager minimapManager;
+
+    private bool _isSimulationActive;
+    private DistrictType _selectedDistrict = DistrictType.None;
+
     public void FlushBufferToGPU()
     {
-        if (!_bufferDirty || _cachedRenderData == null || renderBuffer == null)
+        if (!bufferDirty || cachedRenderData == null || renderBuffer == null)
             return;
 
-        renderBuffer.SetData(_cachedRenderData);
-        _bufferDirty = false;
+        renderBuffer.SetData(cachedRenderData);
+        bufferDirty = false;
     }
 
     /// <summary>
@@ -115,59 +112,68 @@ public class BuildingManager : MonoBehaviour
         return data;
     }
 
-    // --- C++ DLL 함수 연결 ---
-    [DllImport("SeoulBuildingProcessor")]
-    private static extern void LoadDistrictData(System.IntPtr dataPointer, int byteLength);
+#if UNITY_WEBGL && !UNITY_EDITOR
+    private const string SeoulBuildingProcessor = "__Internal";
+#else
+    private const string SeoulBuildingProcessor = "SeoulBuildingProcessor";
+#endif
 
-    [DllImport("SeoulBuildingProcessor")]
+    // --- C++ DLL 함수 연결 ---
+    [DllImport(SeoulBuildingProcessor)]
+    private static extern void LoadDistrictData(System.IntPtr dataPointer, int byteLength, int districtId);
+
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void LoadPolygonData(IntPtr dataPointer, int elementCount);
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern System.IntPtr GetBuildingBufferPointer();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern int GetBuildingBufferCount();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void BuildDistrictMesh(int districtId, System.IntPtr terrainHeights, int terrainArrayLength, double centerLon, double centerLat);
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern System.IntPtr GetChunkVertices();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern int GetChunkVertexCount();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern System.IntPtr GetChunkIndices();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern int GetChunkIndexCount();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern int GetDistrictBuildingCount(int districtId);
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void GetBuildingPositions(int districtId, [In, Out] double[] lons, [In, Out] double[] lats);
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void ClearAllNativeData();
 
     // ── 렌더링 버퍼 전용 DLL 함수 ──
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void BuildRenderingBuffer();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern void SetReductionValues([In] float[] values, int count);
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern IntPtr GetRenderingBufferPointer();
 
-    [DllImport("SeoulBuildingProcessor")]
+    [DllImport(SeoulBuildingProcessor)]
     private static extern int GetRenderingBufferCount();
+
+    [DllImport(SeoulBuildingProcessor)]
+    private static extern bool GetDistrictRange(int districtId, out int startIndex, out int count);
+
 
     private void Start()
     {
-        // [핵심] 유니티 에디터 메모리에 남아있는 이전 플레이의 C++ 찌꺼기 데이터 초기화
         ClearAllNativeData();
 
         Debug.Log("[CityManager] Start() - 구역별 건물 데이터 로드 및 메쉬 생성 시작...");
@@ -192,67 +198,42 @@ public class BuildingManager : MonoBehaviour
     private void OnEnable()
     {
         simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationStart;
-        simulationController.OnDistrictBlackedOut += HandleDistrictBlackoutSequence;
+        simulationController.OnBlackoutDistrictChanged += HandleDistrictBlackedOut;
+        simulationController.OnActiveDistrictsChanged += HandleActiveDistrictsChanged;
+        if (minimapManager != null)
+            minimapManager.OnDistrictSelected += HandleDistrictSelected;
     }
 
     private void OnDisable()
     {
-        simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationStart;
-        simulationController.OnDistrictBlackedOut -= HandleDistrictBlackoutSequence;
-    }
-
-    private void HandleBlackoutSimulationStart(bool obj)
-    {
-        if (!obj)
-        {
-            // 시뮬레이션 종료 시 모든 구역의 정전 상태를 초기화
-            ResetAllBlackoutStates();
-        }
-    }
-
-    private void HandleDistrictBlackoutSequence(DistrictType districtType, double consumption)
-    {
-        
-    }
-    private void ResetAllBlackoutStates()
-    {
-
-    }
-    private void ApplyBlackoutToDistrict(DistrictType districtType)
-    {
-        throw new NotImplementedException();
+        simulationController.OnBlackoutSimulationToggled -= HandleBlackoutSimulationStart;
+        simulationController.OnBlackoutDistrictChanged -= HandleDistrictBlackedOut;
+        simulationController.OnActiveDistrictsChanged -= HandleActiveDistrictsChanged;
+        if (minimapManager != null)
+            minimapManager.OnDistrictSelected -= HandleDistrictSelected;
     }
 
     IEnumerator InitializeDistrict()
     {
-        // Tileset이 준비될 때까지 대기
         while (terrainTileset == null || !terrainTileset.enabled)
-        {
             yield return null;
-        }
 
         yield return new WaitForSeconds(2.0f);
-        Debug.Log("[CityManager] Tileset 준비 완료. 구역별 메쉬 생성 시작...");
-        // 지연 후 호출
+        Debug.Log("[BuildingManager] Tileset 준비 완료. 구역별 메시 생성 시작...");
+
         foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
         {
             if (district == DistrictType.None) continue;
-
-            int districtId = (int)district;
-            Debug.Log($"[CityManager] 구역 {districtId} 메쉬 생성 시작...");
-
-            var spawnTask = SpawnDistrictChunkAsync(districtId);
-            yield return new WaitUntil(() => spawnTask.IsCompleted);
-            break; // 한 번에 하나씩 처리
+            yield return StartCoroutine(SpawnDistrictAsync((int)district));
         }
 
-        Debug.Log("[CityManager] 모든 구역의 메쉬 생성이 완료되었습니다!");
+        Debug.Log("[BuildingManager] 모든 구역 메시 생성 완료.");
     }
 
     #region DataLoad
     private void LoadDistrictBinaryFast(int districtId)
     {
-        TextAsset binFile = Resources.Load<TextAsset>($"Districts/District_{districtId}");
+        TextAsset binFile = Resources.Load<TextAsset>($"Districts/{districtId}/District");
         if (binFile == null)
         {
             Debug.Log($"[CityManager] 구역 {districtId} 바이너리 파일을 Resources에서 찾을 수 없음.");
@@ -264,7 +245,7 @@ public class BuildingManager : MonoBehaviour
 
         try
         {
-            LoadDistrictData(handle.AddrOfPinnedObject(), rawData.Length);
+            LoadDistrictData(handle.AddrOfPinnedObject(), rawData.Length, districtId);
         }
         finally
         {
@@ -291,22 +272,88 @@ public class BuildingManager : MonoBehaviour
     #endregion
 
     #region MeshSpawn
-    private async Task SpawnDistrictChunkAsync(int districtId)
-    {
-        List<double3> buildingPositions = GetBuildingPositionsFromCpp(districtId);
-        float[] heights = new float[buildingPositions.Count];
 
-        if (terrainTileset != null && buildingPositions.Count > 0)
+    private IEnumerator SpawnDistrictAsync(int districtId)
+    {
+        // 1. TerrainHeights 로드
+        TextAsset heightFile = Resources.Load<TextAsset>($"Districts/{districtId}/TerrainHeights");
+        if (heightFile == null)
         {
-            var result = await terrainTileset.SampleHeightMostDetailed(buildingPositions.ToArray());
-            for (int i = 0; i < buildingPositions.Count; i++)
-            {
-                heights[i] = result.sampleSuccess[i] ? (float)result.longitudeLatitudeHeightPositions[i].z : 0f;
-            }
+            Debug.LogError($"[BuildingManager] {districtId}: TerrainHeights 없음. 'Tools > Bake Terrain Heights' 를 먼저 실행하세요.");
+            yield break;
         }
 
-        Vector2 centerCoord = DistrictCoordinates.GetCenter(districtId);
+        float[] heights = new float[heightFile.bytes.Length / sizeof(float)];
+        Buffer.BlockCopy(heightFile.bytes, 0, heights, 0, heightFile.bytes.Length);
+        yield return null;
 
+        // 2. C++ DLL로 fullMesh 생성
+        Mesh fullMesh = BuildAndGetDistrictMesh(districtId, heights);
+        if (fullMesh == null)
+        {
+            Debug.LogError($"[BuildingManager] {districtId}: 메시 빌드 실패.");
+            yield break;
+        }
+        yield return null;
+
+        // 3. GameObject 생성
+        SpawnDistrictObject(districtId, fullMesh);
+    }
+
+    private void SpawnDistrictObject(int districtId, Mesh mesh)
+    {
+        GameObject districtRoot = new GameObject($"District_Chunk_{districtId}");
+        if (cesiumGeoreference != null)
+            districtRoot.transform.SetParent(cesiumGeoreference.transform, false);
+
+        Vector2 centerCoord = DistrictCoordinates.GetCenter(districtId);
+        CesiumGlobeAnchor anchor = districtRoot.AddComponent<CesiumGlobeAnchor>();
+        anchor.longitudeLatitudeHeight = new double3(centerCoord.x, centerCoord.y, 0);
+
+        districtRoots[districtId] = districtRoot;
+
+        DistrictObject districtObject = districtRoot.AddComponent<DistrictObject>();
+        districtObject.districtId = districtId;
+        OnDistrictObjectCreated?.Invoke(districtObject);
+
+        districtRoot.AddComponent<MeshFilter>().mesh = mesh;
+        MeshRenderer r = districtRoot.AddComponent<MeshRenderer>();
+        r.sharedMaterial = buildingMaterial;
+        r.renderingLayerMask = RenderingLayerMask.GetMask("BUILDING");
+        r.shadowCastingMode = ShadowCastingMode.Off;
+        r.receiveShadows = false;
+
+        if (districtId != 11110)
+        {
+            districtRoot.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// BakeTerrainHeightsWindow 및 타일 분할에서 사용하는 건물 위치 반환.
+    /// </summary>
+    public double3[] GetBuildingPositionsForBaking(int districtId)
+    {
+        int count = GetDistrictBuildingCount(districtId);
+        if (count == 0) return Array.Empty<double3>();
+
+        double[] lons = new double[count];
+        double[] lats = new double[count];
+        GetBuildingPositions(districtId, lons, lats);
+
+        double3[] positions = new double3[count];
+        for (int i = 0; i < count; i++)
+            positions[i] = new double3(lons[i], lats[i], 0);
+
+        return positions;
+    }
+
+    /// <summary>
+    /// BakeTerrainHeightsWindow에서도 사용. 지형 높이를 받아 C++ 메시를 빌드하고 Unity Mesh로 반환한다.
+    /// </summary>
+    public Mesh BuildAndGetDistrictMesh(int districtId, float[] heights)
+    {
+        Vector2 centerCoord = DistrictCoordinates.GetCenter(districtId);
         GCHandle handle = GCHandle.Alloc(heights, GCHandleType.Pinned);
         try
         {
@@ -316,81 +363,39 @@ public class BuildingManager : MonoBehaviour
         {
             if (handle.IsAllocated) handle.Free();
         }
-
-        ApplyChunkMeshToUnity(districtId);
+        return ExtractChunkMesh();
     }
 
-    private List<double3> GetBuildingPositionsFromCpp(int districtId)
-    {
-        int count = GetDistrictBuildingCount(districtId);
-
-        double[] lons = new double[count];
-        double[] lats = new double[count];
-
-        GetBuildingPositions(districtId, lons, lats);
-
-        List<double3> positions = new List<double3>();
-        for (int i = 0; i < count; i++)
-        {
-            positions.Add(new double3(lons[i], lats[i], 0));
-        }
-        return positions;
-    }
-
-    private void ApplyChunkMeshToUnity(int districtId)
+    private Mesh ExtractChunkMesh()
     {
         int vCount = GetChunkVertexCount();
         int iCount = GetChunkIndexCount();
-
-        if (vCount == 0 || iCount == 0) return;
-
-        System.IntPtr vPtr = GetChunkVertices();
-        System.IntPtr iPtr = GetChunkIndices();
+        if (vCount == 0 || iCount == 0) return null;
 
         float[] rawVertices = new float[vCount * 7];
-        Marshal.Copy(vPtr, rawVertices, 0, vCount * 7);
+        Marshal.Copy(GetChunkVertices(), rawVertices, 0, vCount * 7);
 
         int[] indices = new int[iCount];
-        Marshal.Copy(iPtr, indices, 0, iCount);
+        Marshal.Copy(GetChunkIndices(), indices, 0, iCount);
 
-        Vector3[] unityVertices = new Vector3[vCount];
-        Vector2[] unityUV2 = new Vector2[vCount];
-
+        Vector3[] verts = new Vector3[vCount];
+        Vector2[] uv2 = new Vector2[vCount];
         for (int i = 0; i < vCount; i++)
         {
-            int offset = i * 7;
-            unityVertices[i] = new Vector3(rawVertices[offset], rawVertices[offset + 1], rawVertices[offset + 2]);
-            unityUV2[i] = new Vector2(rawVertices[offset + 6], 0); // 쉐이더 판별용 ID
+            int o = i * 7;
+            verts[i] = new Vector3(rawVertices[o], rawVertices[o + 1], rawVertices[o + 2]);
+            uv2[i] = new Vector2(rawVertices[o + 6], 0);
         }
 
-        Mesh chunkMesh = new Mesh();
-        chunkMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        chunkMesh.vertices = unityVertices;
-        chunkMesh.uv2 = unityUV2;
-        chunkMesh.triangles = indices;
-
-        chunkMesh.RecalculateNormals();
-        chunkMesh.RecalculateBounds();
-
-        GameObject chunkObj = new GameObject($"District_Chunk_{districtId}");
-        if (cesiumGeoreference != null)
-        {
-            chunkObj.transform.SetParent(cesiumGeoreference.transform, false);
-        }
-
-        chunkObj.AddComponent<MeshFilter>().mesh = chunkMesh;
-        MeshRenderer renderer = chunkObj.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = buildingMaterial;
-        renderer.renderingLayerMask = RenderingLayerMask.GetMask("BUILDING");
-
-        CesiumGlobeAnchor anchor = chunkObj.AddComponent<CesiumGlobeAnchor>();
-        Vector2 centerCoord = DistrictCoordinates.GetCenter(districtId);
-        anchor.longitudeLatitudeHeight = new Unity.Mathematics.double3(centerCoord.x, centerCoord.y, 0);
-
-        DistrictObject districtObject = chunkObj.AddComponent<DistrictObject>();
-        districtObject.districtId = districtId;
-        OnDistrictObjectCreated?.Invoke(districtObject);
+        Mesh mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
+        mesh.vertices = verts;
+        mesh.uv2 = uv2;
+        mesh.triangles = indices;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
+
     #endregion
 
     #region RenderBuffer
@@ -407,7 +412,7 @@ public class BuildingManager : MonoBehaviour
         renderBuffer = new ComputeBuffer(count, stride);
 
         SyncRenderCacheFromNative();
-        renderBuffer.SetData(_cachedRenderData);
+        renderBuffer.SetData(cachedRenderData);
         buildingMaterial.SetBuffer("_BuildingRenderBuffer", renderBuffer);
 
         Debug.Log($"[CityManager] 렌더링 버퍼 초기화 완료 ({count}개, {stride}바이트/건물)");
@@ -421,14 +426,14 @@ public class BuildingManager : MonoBehaviour
         int count = GetRenderingBufferCount();
         IntPtr ptr = GetRenderingBufferPointer();
 
-        if (_cachedRenderData == null || _cachedRenderData.Length != count)
-            _cachedRenderData = new BuildingRenderData[count];
+        if (cachedRenderData == null || cachedRenderData.Length != count)
+            cachedRenderData = new BuildingRenderData[count];
 
         int stride = Marshal.SizeOf(typeof(BuildingRenderData));
         for (int i = 0; i < count; i++)
         {
             IntPtr itemPtr = new IntPtr(ptr.ToInt64() + (i * stride));
-            _cachedRenderData[i] = Marshal.PtrToStructure<BuildingRenderData>(itemPtr);
+            cachedRenderData[i] = Marshal.PtrToStructure<BuildingRenderData>(itemPtr);
         }
     }
     #endregion
@@ -437,20 +442,159 @@ public class BuildingManager : MonoBehaviour
     // 프레임마다 GetFullBuildingData()를 호출하지 않도록, 구별 건물 인덱스 매핑을 초기화 시점에 한 번만 수행
     private void BuildingDistrictIndexMap()
     {
-        NativeBuildingData[] allBuildings = GetFullBuildingData();
-
-        for (int i = 0; i < allBuildings.Length; i++)
+        foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
         {
-            int districtId = allBuildings[i].districtId;
-            if (!_districtBuildingIndices.TryGetValue(districtId, out var list))
+            if (district == DistrictType.None) continue;
+            int districtId = (int)district;
+
+            if (GetDistrictRange(districtId, out int start, out int count))
             {
-                list = new List<int>();
-                _districtBuildingIndices[districtId] = list;
+                districtRanges[districtId] = (start, count);
+                BuildSortedIndices(districtId, start, count);
             }
-            list.Add(i);
+        }
+    }
+
+    private void BuildSortedIndices(int districtId, int start, int count)
+    {
+        int[] indices = new int[count];
+        for (int i = 0; i < count; i++)
+            indices[i] = start + i;
+
+        // reductionValue 내림차순 정렬 (물리적 배열은 그대로, 인덱스 순서만 정렬)
+        Array.Sort(indices, (a, b) =>
+            cachedRenderData[b].reductionValue.CompareTo(cachedRenderData[a].reductionValue));
+
+        sortedDistrictIndices[districtId] = indices;
+    }
+
+    /// <summary>
+    /// 모든 구역의 정렬된 건물 인덱스를 reductionValue 기준으로 다시 계산한다.
+    /// BuildSortedIndices()는 Start() 시점(아직 API의 실제 reductionValue가 도착하기 전,
+    /// 즉 전부 0인 상태)에 한 번 호출되므로 그대로 두면 정전이 항상 배열 순서대로 발생한다.
+    /// DistrictManager가 실제 reductionValue를 buffer에 반영(ApplyReductionScoresToBuffer)한
+    /// 직후 이 메서드를 호출해 정렬을 갱신해야 reductionValue가 높은 건물부터 정확히 꺼진다.
+    /// </summary>
+    public void RebuildSortedIndices()
+    {
+        if (districtRanges.Count == 0) return;
+
+        foreach (var kvp in districtRanges)
+        {
+            BuildSortedIndices(kvp.Key, kvp.Value.start, kvp.Value.count);
+        }
+    }
+
+    private void HandleActiveDistrictsChanged(DistrictType current, DistrictType next)
+    {
+        foreach (var (id, root) in districtRoots)
+        {
+            bool isActive = id == (int)current ||
+                            (next != DistrictType.None && id == (int)next);
+            root.SetActive(isActive);
+        }
+    }
+
+    private void HandleDistrictSelected(DistrictType districtType)
+    {
+        _selectedDistrict = districtType;
+
+        int selectedId = (int)districtType;
+        foreach (var (id, root) in districtRoots)
+            root.SetActive(id == selectedId);
+    }
+
+    private void HandleBlackoutSimulationStart(bool isOn)
+    {
+        _isSimulationActive = isOn;
+        _selectedDistrict = DistrictType.None;
+
+        if (!isOn)
+            ResetAllBlackoutStates();
+    }
+
+    private void HandleDistrictBlackedOut(DistrictType districtType)
+    {
+        Debug.Log("[BuildingManager] 구역 정전 연출 시작: " + DataConverter.GetDistrictName(districtType));
+        int districtId = (int)districtType;
+        if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices))
+        {
+            Debug.LogWarning($"[BuildingManager] '{DataConverter.GetDistrictName(districtType)}' 구의 정렬된 인덱스가 없습니다.");
+            return;
         }
 
-        Debug.Log($"[BuildingManager] 구별 건물 인덱스 매핑 완료 ({_districtBuildingIndices.Count}개 구)");
+        if (blackoutCoroutine != null)
+            StopCoroutine(blackoutCoroutine);
+
+        blackoutCoroutine = StartCoroutine(BlackoutSequence(sortedIndices));
+    }
+
+    IEnumerator BlackoutSequence(int[] sortedIndices)
+    {
+        // ── 1단계: 정전 ──
+        for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
+        {
+            int end = Mathf.Min(i + buildingsPerBatch, sortedIndices.Length);
+
+            for (int j = i; j < end; j++)
+            {
+                cachedRenderData[sortedIndices[j]].isBlackout = 1;
+            }
+
+            MarkBufferDirty();
+            FlushBufferToGPU();
+
+            yield return new WaitForSeconds(secondsBetweenBatch);
+        }
+
+        Debug.Log($"[BuildingManager] 구역 정전 연출 완료 — {blackoutHoldDuration}초 유지 후 복전");
+
+        // ── 2단계: 정전 유지 ──
+        yield return new WaitForSeconds(blackoutHoldDuration);
+
+        // ── 3단계: 복전 (배치 단위로 순차 복원) ──
+        for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
+        {
+            int end = Mathf.Min(i + buildingsPerBatch, sortedIndices.Length);
+
+            for (int j = i; j < end; j++)
+            {
+                cachedRenderData[sortedIndices[j]].isBlackout = 0;
+            }
+
+            MarkBufferDirty();
+            FlushBufferToGPU();
+
+            yield return new WaitForSeconds(secondsBetweenRestoreBatch);
+        }
+
+        Debug.Log("[BuildingManager] 구역 복전 완료 → 다음 구로 이동");
+        blackoutCoroutine = null;
+
+        // 복전까지 끝났으므로 컨트롤러에 알려 다음 구로 진행시킨다.
+        simulationController.NotifyDistrictFinished();
+    }
+
+    private void ResetAllBlackoutStates()
+    {
+        // 진행 중인 정전 연출 코루틴이 있다면 중단
+        if (blackoutCoroutine != null)
+        {
+            StopCoroutine(blackoutCoroutine);
+            blackoutCoroutine = null;
+        }
+
+        if (cachedRenderData == null || cachedRenderData.Length == 0) return;
+
+        for (int i = 0; i < cachedRenderData.Length; i++)
+        {
+            cachedRenderData[i].isBlackout = 0;
+        }
+
+        MarkBufferDirty();
+        FlushBufferToGPU();
+
+        Debug.Log("[BuildingManager] 모든 건물 정전 상태 초기화 완료");
     }
     #endregion
 
