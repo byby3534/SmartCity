@@ -48,10 +48,9 @@ public class GuEnergyPanelUI : MonoBehaviour
 
     private void Awake()
     {
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
-        if (minimapManager == null)
-            minimapManager = FindFirstObjectByType<MinimapManager>();
+                    // 씬에 하나만 있는 매니저들은 비어 있으면 자동으로 찾기
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref minimapManager);
 
         ResolveReferences();
         EnsureCanvasGroup();
@@ -60,6 +59,10 @@ public class GuEnergyPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!RequireArray(donutSegments, nameof(donutSegments), 7)) return;
+        if (!RequireArray(legendDots, nameof(legendDots), 7)) return;
+        if (!RequireArray(legendTexts, nameof(legendTexts), 7)) return;
+
         if (dataManager != null)
         {
             dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
@@ -292,5 +295,24 @@ public class GuEnergyPanelUI : MonoBehaviour
         }
 
         return null;
+    }
+    private bool RequireArray<T>(T[] array, string fieldName, int count) where T : Object
+    {
+        if (array == null || array.Length < count)
+        {
+            Debug.LogError($"[{GetType().Name}] {fieldName} 배열을 {count}개 연결해야 합니다.", this);
+            return false;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            if (array[i] == null)
+            {
+                Debug.LogError($"[{GetType().Name}] {fieldName}[{i}]가 연결되지 않았습니다.", this);
+                return false;
+            }
+        }
+
+        return true;
     }
 }

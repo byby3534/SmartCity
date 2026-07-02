@@ -31,12 +31,10 @@ public class InfoPanelUI : MonoBehaviour
 
     private void Awake()
     {
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
-        if (minimapManager == null)
-            minimapManager = FindFirstObjectByType<MinimapManager>();
+            // 씬에 하나만 있는 매니저들은 비어 있으면 자동으로 찾기
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref minimapManager);
+
 
         ResolveReferences();
         ApplyReserveStage(ReserveRateStagePalette.DefaultReserveRate, force: true);
