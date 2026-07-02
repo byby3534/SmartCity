@@ -50,12 +50,15 @@ public class MinimapColorController : MonoBehaviour
 
         if (dataManager == null)
             dataManager = FindFirstObjectByType<DataManager>();
+
+        if (simulationController == null)
+            simulationController = FindFirstObjectByType<BlackoutSimulationController>();
     }
 
     // dataManager 이벤트 구독
     private void OnEnable()
     {
-        if (dataManager != null)
+        if (dataManager != null && simulationController != null)
         {
             // ONI 데이터 변경
             dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
@@ -67,7 +70,7 @@ public class MinimapColorController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[MinimapManager] DataManager가 연결되지 않았습니다.");
+            Debug.LogWarning("[MinimapColorController] DataManager가 연결되지 않았습니다.");
         }
     }
 
@@ -114,7 +117,7 @@ public class MinimapColorController : MonoBehaviour
     {
         if (data == null || data.Count == 0)
         {
-            Debug.LogWarning("[MinimapManager] OniRangeData가 비어 있습니다.");
+            Debug.LogWarning("[MinimapColorController] OniRangeData가 비어 있습니다.");
             return;
         }
 
@@ -140,7 +143,7 @@ public class MinimapColorController : MonoBehaviour
 
         if (targetData == null || targetData.guConsumption == null)
         {
-            Debug.LogWarning("[MinimapManager] guConsumption 데이터가 없습니다.");
+            Debug.LogWarning("[MinimapColorController] guConsumption 데이터가 없습니다.");
             return;
         }
 
