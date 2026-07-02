@@ -44,6 +44,9 @@ public class DataManager : MonoBehaviour
             apiClient = GetComponent<ApiClient>();
         if (uiController == null)
             uiController = FindFirstObjectByType<UIController>();
+
+        if (GetComponent<ReserveRateStateController>() == null)
+            gameObject.AddComponent<ReserveRateStateController>();
     }
 
     private void Start()

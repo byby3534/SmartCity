@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,37 +5,28 @@ using UnityEngine.UI;
 /// <summary>
 /// 순환단전 시뮬레이션 시작/중단 버튼.
 /// ONI 패널이 열릴 때만 표시되며, 심각 단계(예비율 5% 미만)에서만 활성(빨간색)된다.
-/// /predict(OnPowerDataUpdated)로 즉시 반영, oni_range는 슬라이더 보간용 보충.
 /// </summary>
 public class RollingBlackoutStartButton : MonoBehaviour
 {
     [Header("참조")]
-    [SerializeField] private DataManager dataManager;
     [SerializeField] private UIController uiController;
     [SerializeField] private BlackoutSimulationController simulationController;
+    [SerializeField] private ReserveRateStateController reserveRateState;
     [SerializeField] private Button button;
     [SerializeField] private Graphic buttonBackground;
     [SerializeField] private TMP_Text buttonLabel;
 
-    private readonly List<OniRangeData> _oniRangeEntries = new();
-
-    private int _currentLevel = -1;
-    private bool _hasReceivedData;
     private bool _oniPanelVisible;
     private bool _simOn;
-    private bool _simCompleted;
-    private bool _naturalCompleteInProgress;
-    private Coroutine _completeCoroutine;
+    private int _currentLevel = -1;
+    private ReserveRateSnapshot.UiPhase _uiPhase = ReserveRateSnapshot.UiPhase.Normal;
     private CanvasGroup _panelCanvasGroup;
 
     private void Awake()
     {
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
-        if (simulationController == null)
-            simulationController = FindFirstObjectByType<BlackoutSimulationController>();
+        SceneRefs.Resolve(ref uiController);
+        SceneRefs.Resolve(ref simulationController);
+        SceneRefs.Resolve(ref reserveRateState);
 
         ResolveReferences();
 
@@ -48,42 +37,34 @@ public class RollingBlackoutStartButton : MonoBehaviour
         }
     }
 
-    private void Start()
+    private void OnEnable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
-            dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
-        }
-
         if (uiController != null)
         {
-            uiController.OnOniValueChanged += HandleOniSliderChanged;
             uiController.OnOniPanelVisibilityChanged += HandleOniPanelVisibilityChanged;
             HandleOniPanelVisibilityChanged(uiController.IsOniPanelVisible);
         }
 
-        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
-        simulationController.OnSimulationCompleted += HandleSimCompleted;
+        if (simulationController != null)
+            simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
 
-        RefreshVisual();
+        if (reserveRateState != null)
+        {
+            reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
+            HandleReserveRateStateChanged(reserveRateState.Current);
+        }
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
-            dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
-        }
         if (uiController != null)
-        {
-            uiController.OnOniValueChanged -= HandleOniSliderChanged;
             uiController.OnOniPanelVisibilityChanged -= HandleOniPanelVisibilityChanged;
-        }
 
-        simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
-        simulationController.OnSimulationCompleted -= HandleSimCompleted;
+        if (simulationController != null)
+            simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
+
+        if (reserveRateState != null)
+            reserveRateState.OnStateChanged -= HandleReserveRateStateChanged;
     }
 
     private void ResolveReferences()
@@ -108,119 +89,26 @@ public class RollingBlackoutStartButton : MonoBehaviour
         RefreshVisual();
     }
 
-    private void HandlePowerDataUpdated(PowerGridData data)
+    private void HandleReserveRateStateChanged(ReserveRateSnapshot snapshot)
     {
-        if (data == null || _simOn)
-            return;
-
-        _hasReceivedData = true;
-        _currentLevel = ReserveRateStagePalette.ToLevel(data.reserveRate);
+        _currentLevel = snapshot.Level;
+        _uiPhase = snapshot.Phase;
+        _simOn = snapshot.IsSimulating;
         RefreshVisual();
-    }
-
-    private void HandleOniRangeDataUpdated(List<OniRangeData> data)
-    {
-        _oniRangeEntries.Clear();
-
-        if (data == null || data.Count == 0)
-        {
-            if (!_hasReceivedData)
-            {
-                _currentLevel = -1;
-                RefreshVisual();
-            }
-            return;
-        }
-
-        _oniRangeEntries.AddRange(data);
-
-        if (_simOn)
-            return;
-
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
-        if (!_hasReceivedData)
-            ApplyOniValue(oni);
-    }
-
-    private void HandleOniSliderChanged(float oniValue)
-    {
-        if (_simOn) return;
-        ApplyOniValue(oniValue);
-    }
-
-    private void ApplyOniValue(float oniValue)
-    {
-        if (_oniRangeEntries.Count == 0) return;
-
-        OniRangeData entry = GetClosestOniEntry(oniValue);
-        if (entry == null) return;
-
-        _currentLevel = ReserveRateStagePalette.ToLevel(entry.reserveRate);
-        RefreshVisual();
-    }
-
-    private OniRangeData GetClosestOniEntry(float oniValue)
-    {
-        OniRangeData closest = null;
-        float minDistance = float.MaxValue;
-
-        foreach (OniRangeData data in _oniRangeEntries)
-        {
-            float distance = Mathf.Abs(data.oni - oniValue);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = data;
-            }
-        }
-
-        return closest;
-    }
-
-    private void HandleClick()
-    {
-        if (simulationController == null || _simCompleted || _naturalCompleteInProgress) return;
-        simulationController.RequestToggle(!_simOn);
     }
 
     private void HandleSimToggled(bool isOn)
     {
         _simOn = isOn;
-
-        if (isOn)
-        {
-            _simCompleted = false;
-            _naturalCompleteInProgress = false;
-        }
-
-        if (!_naturalCompleteInProgress)
-            RefreshVisual();
+        RefreshVisual();
     }
 
-    private void HandleSimCompleted()
+    private void HandleClick()
     {
-        _simOn = false;
-        _naturalCompleteInProgress = true;
+        if (simulationController == null || _uiPhase == ReserveRateSnapshot.UiPhase.SimCompletedHold)
+            return;
 
-        if (_completeCoroutine != null)
-            StopCoroutine(_completeCoroutine);
-        _completeCoroutine = StartCoroutine(CompleteSequence());
-    }
-
-    private IEnumerator CompleteSequence()
-    {
-        _simCompleted = true;
-        RefreshVisual();
-
-        yield return new WaitForSeconds(2f);
-        yield return new WaitForSeconds(1f);
-
-        _simCompleted = false;
-        _naturalCompleteInProgress = false;
-        _simOn = false;
-        RefreshVisual();
-
-        _completeCoroutine = null;
+        simulationController.RequestToggle(!_simOn);
     }
 
     private void SetPanelVisible(bool visible)
@@ -240,8 +128,9 @@ public class RollingBlackoutStartButton : MonoBehaviour
         if (!_oniPanelVisible)
             return;
 
+        bool simCompleted = _uiPhase == ReserveRateSnapshot.UiPhase.SimCompletedHold;
         bool canSimulate = ReserveRateStagePalette.CanSimulate(_currentLevel);
-        bool interactable = canSimulate && !_simCompleted && !_naturalCompleteInProgress;
+        bool interactable = canSimulate && !simCompleted;
 
         if (button != null)
             button.interactable = interactable;
@@ -258,7 +147,7 @@ public class RollingBlackoutStartButton : MonoBehaviour
 
         buttonLabel.color = Color.white;
 
-        if (_simCompleted)
+        if (simCompleted)
             buttonLabel.text = "시뮬레이션 완료";
         else if (_simOn)
             buttonLabel.text = "순환 단전 Stop";
