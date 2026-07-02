@@ -17,31 +17,33 @@ public class DistrictManager : MonoBehaviour
     private bool _bufferReady;
 
     // 건물 인덱스별 districtType/buildingType 매핑 (한 번만 빌드)
-    private int[] _buildingDistrictTypes;
-    private int[] _buildingBuildingTypes;
+    private int[] buildingDistrictTypes;
+    private int[] buildingBuildingTypes;
+
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref buildingManager);
+    }
 
     private void OnEnable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
-            dataManager.OnAllDistrictsParsed += HandleAllDistrictsParsed;
-            buildingManager.OnDistrictObjectCreated += RegisterDistrictObject;
-        }
-        else
-        {
-            Debug.LogWarning("[DistrictManager] dataManager가 존재하지 않습니다.");
-        }
+        if (!SceneRefs.RequireAll(this, (dataManager, nameof(dataManager)), (buildingManager, nameof(buildingManager)))) return;
+
+        dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
+        dataManager.OnAllDistrictsParsed += HandleAllDistrictsParsed;
+        
+        buildingManager.OnDistrictObjectCreated += RegisterDistrictObject;
     }
 
     private void OnDisable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnDistrictDataUpdated -= HandleDistrictDataUpdated;
-            dataManager.OnAllDistrictsParsed -= HandleAllDistrictsParsed;
-            buildingManager.OnDistrictObjectCreated -= RegisterDistrictObject;
-        }
+        if (!SceneRefs.RequireAll(this, (dataManager, nameof(dataManager)), (buildingManager, nameof(buildingManager)))) return;
+
+        dataManager.OnDistrictDataUpdated -= HandleDistrictDataUpdated;
+        dataManager.OnAllDistrictsParsed -= HandleAllDistrictsParsed;
+        
+        buildingManager.OnDistrictObjectCreated -= RegisterDistrictObject;
     }
 
     private void Start()
@@ -55,13 +57,8 @@ public class DistrictManager : MonoBehaviour
     /// </summary>
     private IEnumerator WaitForBufferReady()
     {
-        if (buildingManager == null)
-            buildingManager = FindFirstObjectByType<BuildingManager>();
-
         yield return new WaitUntil(() =>
-            buildingManager != null &&
-            buildingManager.CachedRenderData != null &&
-            buildingManager.CachedRenderData.Length > 0);
+        buildingManager != null && buildingManager.CachedRenderData != null && buildingManager.CachedRenderData.Length > 0);
 
         // 전체 건물 데이터에서 구/건물유형 매핑 테이블 생성
         BuildBuildingTypeMapping();
@@ -86,13 +83,20 @@ public class DistrictManager : MonoBehaviour
     private void BuildBuildingTypeMapping()
     {
         NativeBuildingData[] fullData = buildingManager.GetFullBuildingData();
-        _buildingDistrictTypes = new int[fullData.Length];
-        _buildingBuildingTypes = new int[fullData.Length];
+
+        if (fullData.Length < 0)
+        {
+            Debug.LogWarning("[DistrictManager] 전체 건물 데이터가 비어있습니다. 매핑 테이블을 구축할 수 없습니다.");
+            return;
+        }
+
+        buildingDistrictTypes = new int[fullData.Length];
+        buildingBuildingTypes = new int[fullData.Length];
 
         for (int i = 0; i < fullData.Length; i++)
         {
-            _buildingDistrictTypes[i] = fullData[i].districtType;
-            _buildingBuildingTypes[i] = fullData[i].buildingType;
+            buildingDistrictTypes[i] = fullData[i].districtType;
+            buildingBuildingTypes[i] = fullData[i].buildingType;
         }
 
         Debug.Log($"[DistrictManager] 건물 매핑 테이블 구축 완료 ({fullData.Length}개)");
@@ -168,11 +172,17 @@ public class DistrictManager : MonoBehaviour
 
         int updatedCount = 0;
 
+        if (buffer.Length != buildingDistrictTypes.Length)
+        {
+            Debug.LogWarning($"[DistrictManager] 건물 매핑 테이블 길이({buildingDistrictTypes.Length})과 GPU 버퍼 길이({buffer.Length})가 일치하지 않습니다. reductionValue를 적용할 수 없습니다.");
+            return;
+        }
+
         for (int i = 0; i < buffer.Length; i++)
         {
             // 매핑 테이블에서 이 건물의 구/용도 타입 조회
-            DistrictType dt = (DistrictType)_buildingDistrictTypes[i];
-            BuildingType bt = (BuildingType)_buildingBuildingTypes[i];
+            DistrictType dt = (DistrictType)buildingDistrictTypes[i];
+            BuildingType bt = (BuildingType)buildingBuildingTypes[i];
 
             if (!districts.TryGetValue(dt, out DistrictData districtData))
             {
@@ -197,11 +207,7 @@ public class DistrictManager : MonoBehaviour
         // GPU에 반영
         buildingManager.MarkBufferDirty();
         buildingManager.FlushBufferToGPU();
-
-        // reductionValue가 실제 값으로 갱신되었으므로, 정전 연출용 정렬 인덱스도 다시 계산해야
-        // "필요도가 높은 건물부터" 정전이 발생한다 (Start() 시점엔 reductionValue가 전부 0이라
-        // 그때 만든 정렬은 의미가 없음).
-        buildingManager.RebuildSortedIndices();
+        buildingManager.RebuildSortedIndices(); // GPU에서 reductionValue 기준으로 정렬된 인덱스 재생성
 
         Debug.Log($"[DistrictManager] reductionValue 갱신 완료 ({updatedCount}개 건물, 범위 {minScore:F3}~{maxScore:F3})");
     }

@@ -108,8 +108,6 @@ public class BlackoutLogger : MonoBehaviour
 
         SimulationLog.Write($"{guName} 순환 단전 완료", LogLineStyle.DistrictComplete);
         _logCoroutine = null;
-
-        simulationController.NotifyDistrictFinished();
     }
 
     private void HandleSimulationCompleted()
