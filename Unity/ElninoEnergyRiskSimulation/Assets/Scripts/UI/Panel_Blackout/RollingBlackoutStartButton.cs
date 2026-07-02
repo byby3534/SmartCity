@@ -28,6 +28,7 @@ public class RollingBlackoutStartButton : MonoBehaviour
     private bool _simCompleted;
     private bool _naturalCompleteInProgress;
     private Coroutine _completeCoroutine;
+    private CanvasGroup _panelCanvasGroup;
 
     private void Awake()
     {
@@ -95,6 +96,10 @@ public class RollingBlackoutStartButton : MonoBehaviour
 
         if (buttonLabel == null)
             buttonLabel = GetComponentInChildren<TMP_Text>(true);
+
+        _panelCanvasGroup = GetComponent<CanvasGroup>();
+        if (_panelCanvasGroup == null)
+            _panelCanvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
     private void HandleOniPanelVisibilityChanged(bool visible)
@@ -218,9 +223,19 @@ public class RollingBlackoutStartButton : MonoBehaviour
         _completeCoroutine = null;
     }
 
+    private void SetPanelVisible(bool visible)
+    {
+        if (_panelCanvasGroup == null)
+            return;
+
+        _panelCanvasGroup.alpha = visible ? 1f : 0f;
+        _panelCanvasGroup.interactable = visible;
+        _panelCanvasGroup.blocksRaycasts = visible;
+    }
+
     private void RefreshVisual()
     {
-        gameObject.SetActive(_oniPanelVisible);
+        SetPanelVisible(_oniPanelVisible);
 
         if (!_oniPanelVisible)
             return;
