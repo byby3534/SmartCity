@@ -331,7 +331,7 @@ public class BuildingManager : MonoBehaviour
         r.shadowCastingMode = ShadowCastingMode.Off;
         r.receiveShadows = false;
 
-        if (districtId != 11110)
+        if (districtId != (int)DistrictType.JONGNO)
         {
             districtRoot.SetActive(false);
         }
@@ -504,6 +504,8 @@ public class BuildingManager : MonoBehaviour
 
     private void HandleActiveDistrictsChanged(DistrictType current, DistrictType next)
     {
+        _selectedDistrict = current;
+
         foreach (var (id, root) in districtRoots)
         {
             bool isActive = id == (int)current ||
@@ -524,10 +526,12 @@ public class BuildingManager : MonoBehaviour
     private void HandleBlackoutSimulationStart(bool isOn)
     {
         _isSimulationActive = isOn;
-        _selectedDistrict = DistrictType.None;
 
         if (!isOn)
+        {
             ResetAllBlackoutStates();
+            HandleDistrictSelected(_selectedDistrict);
+        }
     }
 
     private void HandleDistrictBlackedOut(DistrictType districtType)
