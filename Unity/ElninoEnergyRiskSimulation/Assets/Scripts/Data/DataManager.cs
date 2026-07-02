@@ -15,8 +15,8 @@ public class DataManager : MonoBehaviour
     public event Action<DistrictData> OnDistrictDataUpdated;
     public event Action<List<OniRangeData>> OniRangeDataUpdated;
 
-    // public event Action<CurrentData> OnCurrentDataUpdated; // 예정 추가
-    public event Action<JObject> OnCurrentDataUpdated; // 예정 추가
+    public event Action<JObject> OnCurrentTempDataUpdated; // 예정 추가
+    public event Action<JObject> OnCurrentPowerUpdated;
     public event Action OnAllDistrictsParsed;
 
     // 블랙아웃 시뮬레이션: /blackout_simulation 순회 구 목록 + 구별 소비량
@@ -34,7 +34,9 @@ public class DataManager : MonoBehaviour
 
     // 추가 - 실시간 데이터 갱신
     private static readonly WaitForSeconds WeatherRefreshDelay = new WaitForSeconds(3600f);
+    private static readonly WaitForSeconds PowerRefreshDelay = new WaitForSeconds(300f);
     private Coroutine _weatherCoroutine;
+    private Coroutine _powerCoroutine;
 
     private void Awake()
     {
@@ -47,6 +49,7 @@ public class DataManager : MonoBehaviour
     private void Start()
     {
         _weatherCoroutine = StartCoroutine(WeatherRefreshLoop());
+        _powerCoroutine = StartCoroutine(PowerRefreshLoop());
     }
 
     private void OnEnable()
@@ -70,6 +73,12 @@ public class DataManager : MonoBehaviour
         {
             StopCoroutine(_weatherCoroutine);
             _weatherCoroutine = null;
+        }
+
+        if (_powerCoroutine != null)
+        {
+            StopCoroutine(_powerCoroutine);
+            _powerCoroutine = null;
         }
     }
 
@@ -96,13 +105,13 @@ public class DataManager : MonoBehaviour
     }
 
     // 예정 추가
-    private void LoadCurrentData()
+    private void LoadCurrentTempData()
     {
         apiClient.FetchCurrentWeather((data) =>
         {
             if (data == null)
             {
-                Debug.LogError("Current Weather API 응답 Null");
+                Debug.LogError("Current Temp API 응답 Null");
                 return;
             }
 
@@ -111,7 +120,26 @@ public class DataManager : MonoBehaviour
             if (weather == null)
                 return;
 
-            OnCurrentDataUpdated?.Invoke(weather);
+            OnCurrentTempDataUpdated?.Invoke(weather);
+        });
+    }
+
+    private void LoadCurrentPower()
+    {
+        apiClient.FetchCurrentPower((data) =>
+        {
+            if (data == null)
+            {
+                Debug.LogError("Current Power API 응답 Null");
+                return;
+            }
+
+            JObject power = data["power"] as JObject;
+
+            if (power == null)
+                return;
+
+            OnCurrentPowerUpdated?.Invoke(power);
         });
     }
 
@@ -119,9 +147,19 @@ public class DataManager : MonoBehaviour
     {
         while (true)
         {
-            LoadCurrentData();
+            LoadCurrentTempData();
 
             yield return WeatherRefreshDelay;
+        }
+    }
+
+    private IEnumerator PowerRefreshLoop()
+    {
+        while (true)
+        {
+            LoadCurrentPower();
+
+            yield return PowerRefreshDelay;
         }
     }
 

@@ -29,6 +29,8 @@ public class InfoPanelUI : MonoBehaviour
     private string cachedEmergencyStage;
     private int _currentStageLevel = -1;
 
+    private float _currentReserveRate = ReserveRateStagePalette.DefaultReserveRate;
+
     private void Awake()
     {
         if (dataManager == null)
@@ -39,7 +41,7 @@ public class InfoPanelUI : MonoBehaviour
             minimapManager = FindFirstObjectByType<MinimapManager>();
 
         ResolveReferences();
-        ApplyReserveStage(ReserveRateStagePalette.DefaultReserveRate, force: true);
+        ApplyReserveStage(_currentReserveRate, force: true);
         RefreshRealtimeDateDisplay();
     }
 
@@ -47,7 +49,8 @@ public class InfoPanelUI : MonoBehaviour
     {
         if (dataManager != null)
         {
-            dataManager.OnCurrentDataUpdated += HandleCurrentDataUpdated;
+            dataManager.OnCurrentTempDataUpdated += HandleCurrentTempUpdated;
+            dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
             dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
             dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
             dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
@@ -64,7 +67,8 @@ public class InfoPanelUI : MonoBehaviour
     {
         if (dataManager != null)
         {
-            dataManager.OnCurrentDataUpdated -= HandleCurrentDataUpdated;
+            dataManager.OnCurrentTempDataUpdated -= HandleCurrentTempUpdated;
+            dataManager.OnCurrentPowerUpdated -= HandleCurrentPowerUpdated;
             dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
             dataManager.OnDistrictDataUpdated -= HandleDistrictDataUpdated;
             dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
@@ -77,7 +81,7 @@ public class InfoPanelUI : MonoBehaviour
             minimapManager.OnDistrictSelected -= HandleDistrictSelected;
     }
 
-    private void HandleCurrentDataUpdated(JObject weather)
+    private void HandleCurrentTempUpdated(JObject weather)
     {
         if (_hasPredictContext || weather == null)
             return;
@@ -89,6 +93,21 @@ public class InfoPanelUI : MonoBehaviour
 
         if (float.TryParse(weather["temperature"].ToString(), out float temperature))
             SetRealtimeTemperature(temperature);
+    }
+
+    private void HandleCurrentPowerUpdated(JObject power)
+    {
+        if (_hasPredictContext || power == null)
+            return;
+
+        if (power["suppReserveRate"] == null)
+            return;
+
+        if (float.TryParse(power["suppReserveRate"].ToString(), out float reserveRate))
+        {
+            _currentReserveRate = reserveRate;
+            ApplyReserveStage(_currentReserveRate, force: true);
+        }
     }
 
     private void HandlePowerDataUpdated(PowerGridData data)
