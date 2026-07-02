@@ -323,7 +323,10 @@ public class BuildingManager : MonoBehaviour
         r.shadowCastingMode = ShadowCastingMode.Off;
         r.receiveShadows = false;
 
-        districtRoot.SetActive(false);
+        if (districtId != 11110)
+        {
+            districtRoot.SetActive(false);
+        }
     }
 
     /// <summary>
