@@ -195,6 +195,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1584300217}
     - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: mainCamera
+      value: 
+      objectReference: {fileID: 1394554679}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
       propertyPath: lod0ScreenSize
       value: 0.1
       objectReference: {fileID: 0}
@@ -202,6 +206,10 @@ PrefabInstance:
       propertyPath: lod1ScreenSize
       value: 0.005
       objectReference: {fileID: 0}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: minimapManager
+      value: 
+      objectReference: {fileID: 360179008}
     - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
       propertyPath: terrainTileset
       value: 
@@ -306,6 +314,10 @@ PrefabInstance:
       propertyPath: minimapManager
       value: 
       objectReference: {fileID: 360179008}
+    - target: {fileID: 5743362566020846408, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
       propertyPath: m_Enabled
       value: 1
@@ -702,7 +714,7 @@ MonoBehaviour:
   _preloadAncestors: 1
   _preloadSiblings: 1
   _forbidHoles: 0
-  _maximumSimultaneousTileLoads: 20
+  _maximumSimultaneousTileLoads: 6
   _maximumCachedBytes: 536870912
   _loadingDescendantLimit: 20
   _enableFrustumCulling: 1
@@ -1756,7 +1768,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1394554671}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.15934e-16, y: 3.2440753e-16, z: 2.2800454e-15, w: 1}
+  m_LocalRotation: {x: -8.881784e-16, y: 4.6748193e-16, z: 3.0601534e-15, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1930,18 +1942,18 @@ MonoBehaviour:
   _detectTransformChanges: 1
   _localToGlobeFixedMatrix:
     c0:
-      x: -0.798732133364849
-      y: -0.6016867782579547
-      z: 0.0000000000000022137066659978113
+      x: -0.7987321333648499
+      y: -0.6016867782579537
+      z: 0.0000000000000029620444735979235
       w: 0
     c1:
-      x: -0.47714135730148743
-      y: 0.6333995494091275
+      x: -0.47714135730148616
+      y: 0.6333995494091285
       z: 0.6092135388850191
       w: 0
     c2:
-      x: 0.36655573148285575
-      y: -0.4865984295883797
+      x: 0.3665557314828556
+      y: -0.4865984295883799
       z: 0.7930062194202463
       w: 0
     c3:
