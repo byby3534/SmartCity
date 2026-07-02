@@ -20,6 +20,11 @@ public class BlackoutSimulationController : MonoBehaviour
     private bool                       _isOn;
     private bool                       _waitingForFinish;
 
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref dataManager);
+    }
+
     public void RequestToggle(bool isOn)
     {
         if (_isOn == isOn) return;
@@ -52,12 +57,17 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!SceneRefs.Require(this, dataManager, nameof(dataManager)))
+            return;
+
         dataManager.OnPowerDataUpdated          += HandlePowerDataUpdated;
         dataManager.OnBlackoutSimulationParsed  += HandleBlackoutSimulationParsed;
     }
 
     private void OnDisable()
     {
+        if (dataManager == null) return;
+
         dataManager.OnPowerDataUpdated          -= HandlePowerDataUpdated;
         dataManager.OnBlackoutSimulationParsed  -= HandleBlackoutSimulationParsed;
     }

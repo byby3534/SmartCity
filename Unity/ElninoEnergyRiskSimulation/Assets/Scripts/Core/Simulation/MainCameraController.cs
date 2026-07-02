@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using UnityEngine;
 using CesiumForUnity;
-using Unity.Mathematics;
 using TMPro;
+using Unity.Mathematics;
+using UnityEngine;
 
 public class MainCameraController : MonoBehaviour
 {
@@ -128,6 +128,6 @@ public class MainCameraController : MonoBehaviour
         // 카메라가 아래를 보도록
         mainCamera.transform.rotation = Quaternion.Euler(lookDownRotation);
 
-        cilkedGuName.text = "현재 위치: " + DataConverter.GetDistrictName(districtType);
+        cilkedGuName.text = DataConverter.GetDistrictName(districtType);
     }
 }

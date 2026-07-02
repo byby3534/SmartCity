@@ -36,6 +36,14 @@ public class DataManager : MonoBehaviour
     private static readonly WaitForSeconds WeatherRefreshDelay = new WaitForSeconds(3600f);
     private Coroutine _weatherCoroutine;
 
+    private void Awake()
+    {
+        if (apiClient == null)
+            apiClient = GetComponent<ApiClient>();
+        if (uiController == null)
+            uiController = FindFirstObjectByType<UIController>();
+    }
+
     private void Start()
     {
         _weatherCoroutine = StartCoroutine(WeatherRefreshLoop());
@@ -157,6 +165,13 @@ public class DataManager : MonoBehaviour
         }
 
         // 슬라이더 초기화 (ONI 값으로)
+        if (uiController == null)
+        {
+            Debug.LogError("[DataManager] UIController가 연결되지 않아 ONI 슬라이더를 표시할 수 없습니다.");
+            yield return new WaitUntil(() => isRangeLoaded);
+            yield break;
+        }
+
         uiController.InitSlider(fetchedOni.Value);
 
         // /oni 완료 후 /predict 순차 호출

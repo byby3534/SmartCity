@@ -20,8 +20,8 @@ using UnityEngine.UI;
 public class DonutMeshRenderer : Graphic
 {
     [Header("도넛 형태")]
-    [SerializeField] private float innerRadius = 80f;
-    [SerializeField] private float outerRadius = 140f;
+    [SerializeField] private float innerRadius = 40f;
+    [SerializeField] private float outerRadius = 90f;
     [Range(4, 256)]
     [SerializeField] private int segments = 64;
 

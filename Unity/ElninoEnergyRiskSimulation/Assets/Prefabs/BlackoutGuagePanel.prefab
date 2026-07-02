@@ -137,8 +137,8 @@ MonoBehaviour:
   m_Color: {r: 0.7264151, g: 0.7264151, b: 0.7264151, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  innerRadius: 80
-  outerRadius: 140
+  innerRadius: 40
+  outerRadius: 90
   segments: 96
   startAngleDeg: 108
   endAngleDeg: 72
@@ -243,8 +243,8 @@ MonoBehaviour:
   m_Color: {r: 0.85, g: 0.15, b: 0.2, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  innerRadius: 80
-  outerRadius: 150
+  innerRadius: 40
+  outerRadius: 90
   segments: 96
   startAngleDeg: 36
   endAngleDeg: 0
@@ -313,8 +313,8 @@ MonoBehaviour:
   m_Color: {r: 0.8584906, g: 0.8584906, b: 0.8584906, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  innerRadius: 80
-  outerRadius: 140
+  innerRadius: 40
+  outerRadius: 90
   segments: 96
   startAngleDeg: 144
   endAngleDeg: 108
@@ -925,8 +925,8 @@ MonoBehaviour:
   m_Color: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  innerRadius: 80
-  outerRadius: 140
+  innerRadius: 40
+  outerRadius: 90
   segments: 96
   startAngleDeg: 180
   endAngleDeg: 144
@@ -1269,8 +1269,8 @@ MonoBehaviour:
   m_Color: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  innerRadius: 80
-  outerRadius: 140
+  innerRadius: 40
+  outerRadius: 90
   segments: 96
   startAngleDeg: 72
   endAngleDeg: 36

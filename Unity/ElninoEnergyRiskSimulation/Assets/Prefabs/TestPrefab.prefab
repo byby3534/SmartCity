@@ -561,8 +561,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d6d949cd7ba39241a08b0444a3f4f1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIController
-  yearDropdown: {fileID: 0}
-  monthDropdown: {fileID: 0}
+  datePicker: {fileID: 0}
   oniSliderPanel: {fileID: 0}
   oniSlider: {fileID: 0}
   oniTypeText: {fileID: 0}

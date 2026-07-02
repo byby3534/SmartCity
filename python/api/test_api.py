@@ -186,6 +186,25 @@ def run_tests() -> int:
     else:
         _fail("/predict 파라미터 누락", f"status={status} (기대=400)"); failures += 1
 
+    # 3-4. 과거 실측 ONI → EPSIS 실측 예비율 (2013-01 경계)
+    status, d4, elapsed = _call_get(client, "/predict?year=2013&month=1&oni=-0.29")
+    _log("/predict 과거 EPSIS 예비율 (2013-01)", elapsed)
+    if status == 200:
+        pred = d4.get("predicted", {})
+        rr = pred.get("supply", {}).get("reserve_rate")
+        temp = pred.get("asos_temp")
+        label = pred.get("alert_label")
+        if d4.get("is_simulated") is not False:
+            _fail("/predict 과거 EPSIS", f"is_simulated={d4.get('is_simulated')}"); failures += 1
+        elif label != "경계":
+            _fail("/predict 과거 EPSIS", f"alert_label={label}, reserve_rate={rr} (기대=경계)"); failures += 1
+        elif temp is None or temp > -1.0:
+            _fail("/predict 과거 EPSIS", f"asos_temp={temp} (기대=ASOS 실측 약 -3.5℃)"); failures += 1
+        else:
+            _ok(f"2013-01 실측ONI → temp={temp}℃ | reserve_rate={rr}% | alert={label}")
+    else:
+        _fail("/predict 과거 EPSIS", f"status={status}"); failures += 1
+
     # ================================================================
     # 4. /predict/oni_range  — ONI 범위 그래프용
     # ================================================================
@@ -215,6 +234,25 @@ def run_tests() -> int:
                 _ok(f"alert_level 범위: {first['alert_level']} (ONI=-2.5) ~ {last['alert_level']} (ONI=+2.5)")
 
         _save("04_predict_oni_range.json", d)
+
+    # 4-2. 과거 실측 ONI 격자점 → 관측 데이터
+    status, d_past, elapsed = _call_get(client, "/predict/oni_range?year=2013&month=1")
+    _log("/predict/oni_range 과거 (2013-01)", elapsed)
+    if status != 200:
+        _fail("/predict/oni_range 과거", f"status={status}"); failures += 1
+    else:
+        oni_range = d_past.get("oni_range", [])
+        actual_pt = next((p for p in oni_range if p.get("is_simulated") is False), None)
+        if actual_pt is None:
+            _fail("/predict/oni_range 과거", "실측 ONI 포인트 없음"); failures += 1
+        elif actual_pt.get("alert_label") != "경계":
+            _fail("/predict/oni_range 과거", f"실측점 alert={actual_pt.get('alert_label')}"); failures += 1
+        elif actual_pt.get("asos_temp", 0) > -1.0:
+            _fail("/predict/oni_range 과거", f"실측점 temp={actual_pt.get('asos_temp')}"); failures += 1
+        else:
+            sim_count = sum(1 for p in oni_range if p.get("is_simulated"))
+            _ok(f"실측 ONI={actual_pt.get('oni')} → temp={actual_pt.get('asos_temp')}℃ | "
+                f"reserve={actual_pt.get('reserve_rate')}% | 시뮬포인트={sim_count}개")
 
     # ================================================================
     # 5. /blackout_simulation  — 순차 정전 시뮬레이션

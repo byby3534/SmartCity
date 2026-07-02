@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class BlackoutGaugePanel : MonoBehaviour
 {
@@ -13,34 +12,19 @@ public class BlackoutGaugePanel : MonoBehaviour
     [SerializeField] private DataManager dataManager;
     [SerializeField] private UIController uiController;
     [SerializeField] private BlackoutSimulationController simulationController;
-    [SerializeField] private Button toggleButton;
-    [SerializeField] private DonutMeshRenderer toggleDonut;
-    [SerializeField] private TMP_Text toggleLabel;
 
     [Header("동작")]
     [SerializeField] private float needleSmoothTime = 0.45f;
     [SerializeField] private float simulationFullRecoveryRatio = 0.30f;
 
-    private static readonly float[] ReserveRateThresholds = { 15f, 10f, 7f, 5f, 0f };
+    private static readonly float[] ReserveRateThresholds = ReserveRateStagePalette.Thresholds;
     private static readonly float[] NeedleAngles = { 72f, 36f, 0f, -36f, -72f };
-    private static readonly Color[] ActiveSegmentColors =
-    {
-        new(0.25f, 0.55f, 0.85f),
-        new(0.40f, 0.75f, 0.90f),
-        new(0.95f, 0.78f, 0.10f),
-        new(0.93f, 0.46f, 0.10f),
-        new(0.85f, 0.15f, 0.20f),
-    };
 
     private const float NormalRangeUpper = 20f;
     private const float SegmentHalfWidth = 18f;
-    private const float InnerRadius = 80f;
-    private const float OuterRadiusNormal = 140f;
-    private const float OuterRadiusActive = 150f;
-
-    private static readonly Color ToggleWhite = Color.white;
-    private static readonly Color ToggleBlack = new(0.10f, 0.10f, 0.10f, 1f);
-    private static readonly Color ToggleRedLight = new(0.92f, 0.48f, 0.48f, 1f);
+    private const float InnerRadius = 40f;
+    private const float OuterRadiusNormal = 90f;
+    private const float OuterRadiusActive = 100f;
 
     private int _currentLevel = -1;
     private float _targetAngle;
@@ -58,6 +42,7 @@ public class BlackoutGaugePanel : MonoBehaviour
     private readonly List<OniRangeData> _oniRangeEntries = new();
     private Coroutine _needleCoroutine;
     private Coroutine _completeCoroutine;
+    private PowerStatusPanelUI _powerStatusPanel;
 
     private void Awake()
     {
@@ -67,62 +52,95 @@ public class BlackoutGaugePanel : MonoBehaviour
             uiController = FindFirstObjectByType<UIController>();
         if (simulationController == null)
             simulationController = FindFirstObjectByType<BlackoutSimulationController>();
-
-        if (toggleButton != null)
-        {
-            var colors = toggleButton.colors;
-            colors.disabledColor = new Color(colors.disabledColor.r, colors.disabledColor.g, colors.disabledColor.b, 1f);
-            toggleButton.colors = colors;
-            toggleButton.transition = Selectable.Transition.None;
-            toggleButton.onClick.AddListener(HandleToggleClick);
-        }
     }
 
     private void Start()
     {
         if (dataManager != null)
+        {
+            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
+        }
 
         if (uiController != null)
             uiController.OnOniValueChanged += HandleOniSliderChanged;
 
-        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
-        simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
-        simulationController.OnSimulationCompleted += HandleSimCompleted;
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
+            simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
+            simulationController.OnSimulationCompleted += HandleSimCompleted;
+        }
 
-        gameObject.SetActive(false);
+        EnsurePowerStatusPanel();
+        ApplyDefaultReserveRate();
+    }
+
+    private void EnsurePowerStatusPanel()
+    {
+        Transform panel = transform.parent;
+        while (panel != null && panel.name != "Panel_PowerStatus")
+            panel = panel.parent;
+
+        if (panel == null)
+            return;
+
+        _powerStatusPanel = panel.GetComponent<PowerStatusPanelUI>();
+        if (_powerStatusPanel == null)
+            _powerStatusPanel = panel.gameObject.AddComponent<PowerStatusPanelUI>();
     }
 
     private void OnEnable()
     {
-        if (!Application.isPlaying || !_hasReceivedData || _simOn) return;
-        UpdateSegmentsForNeedle(ReserveRateToAngle(_lastReserveRate));
-        RefreshToggleVisual();
+        if (!Application.isPlaying || _simOn)
+            return;
+
+        if (_hasReceivedData)
+            ApplyReserveRate(_lastReserveRate, instant: true);
+        else
+            ApplyDefaultReserveRate();
     }
 
     private void OnDestroy()
     {
         if (dataManager != null)
+        {
+            dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
+        }
         if (uiController != null)
             uiController.OnOniValueChanged -= HandleOniSliderChanged;
 
-        simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
-        simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
-        simulationController.OnSimulationCompleted -= HandleSimCompleted;
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
+            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
+            simulationController.OnSimulationCompleted -= HandleSimCompleted;
+        }
+    }
+
+    private void HandlePowerDataUpdated(PowerGridData data)
+    {
+        if (data == null || _simOn)
+            return;
+
+        _hasReceivedData = true;
+        _lastReserveRate = data.reserveRate;
+        _seoulTotal = data.seoulTotalConsumption;
+        ApplyReserveRate(data.reserveRate, instant: true);
     }
 
     private void HandleOniRangeDataUpdated(List<OniRangeData> data)
     {
         if (data == null || data.Count == 0)
         {
-            gameObject.SetActive(false);
+            if (!_hasReceivedData)
+                ApplyDefaultReserveRate();
             return;
         }
 
         _oniRangeEntries.Clear();
         _oniRangeEntries.AddRange(data);
-        gameObject.SetActive(true);
 
         float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
         ApplyOniValue(oni, instant: !_hasReceivedData);
@@ -147,6 +165,16 @@ public class BlackoutGaugePanel : MonoBehaviour
         ApplyReserveRate(entry.reserveRate, instant);
     }
 
+    private void ApplyDefaultReserveRate()
+    {
+        if (_hasReceivedData || _simOn)
+            return;
+
+        _lastReserveRate = ReserveRateStagePalette.DefaultReserveRate;
+        _seoulTotal = 0f;
+        ApplyReserveRate(ReserveRateStagePalette.DefaultReserveRate, instant: true);
+    }
+
     private OniRangeData GetClosestOniEntry(float oniValue)
     {
         OniRangeData closest = null;
@@ -168,7 +196,7 @@ public class BlackoutGaugePanel : MonoBehaviour
     private void ApplyReserveRate(float reserveRate, bool instant)
     {
         reserveRate = Mathf.Max(0f, reserveRate);
-        int level = ReserveRateToLevel(reserveRate);
+        int level = ReserveRateStagePalette.ToLevel(reserveRate);
         float angle = ReserveRateToAngle(reserveRate);
 
         bool needleUnchanged = !instant && !_simOn && level == _currentLevel
@@ -183,13 +211,13 @@ public class BlackoutGaugePanel : MonoBehaviour
         if (!_simOn)
         {
             SetReserveRateLabel(reserveRate);
+            _powerStatusPanel?.ApplyReserveRate(reserveRate);
+
             if (needleUnchanged)
-                UpdateSegmentsForNeedle(angle);
+                UpdateSegmentsForNeedle(angle, _currentLevel);
             else
                 MoveNeedleTo(angle, instant);
         }
-
-        RefreshToggleVisual();
     }
 
     private void HandleSimToggled(bool isOn)
@@ -209,9 +237,6 @@ public class BlackoutGaugePanel : MonoBehaviour
             SetReserveRateLabel(_lastReserveRate);
             RestoreNeedleFromLiveData(instant: false);
         }
-
-        if (!_naturalCompleteInProgress)
-            RefreshToggleVisual();
     }
 
     private void HandleDistrictBlackedOut(DistrictType districtType, double consumption)
@@ -238,11 +263,7 @@ public class BlackoutGaugePanel : MonoBehaviour
 
     private IEnumerator CompleteSequence()
     {
-        if (toggleButton != null)
-            toggleButton.interactable = false;
-
         _simCompleted = true;
-        RefreshToggleVisual();
 
         yield return new WaitForSeconds(2f);
 
@@ -254,15 +275,8 @@ public class BlackoutGaugePanel : MonoBehaviour
         _naturalCompleteInProgress = false;
         _simOn = false;
         SetReserveRateLabel(_lastReserveRate);
-        RefreshToggleVisual();
 
         _completeCoroutine = null;
-    }
-
-    private void HandleToggleClick()
-    {
-        if (simulationController == null || _simCompleted || _naturalCompleteInProgress) return;
-        simulationController.RequestToggle(!_simOn);
     }
 
     private void RestoreNeedleFromLiveData(bool instant)
@@ -278,7 +292,7 @@ public class BlackoutGaugePanel : MonoBehaviour
         {
             StopNeedleAnimation();
             SetNeedleAngle(angle);
-            UpdateSegmentsForNeedle(angle);
+            UpdateSegmentsForNeedle(angle, _currentLevel);
         }
         else
         {
@@ -317,7 +331,7 @@ public class BlackoutGaugePanel : MonoBehaviour
             if (Mathf.Abs(NormalizeAngle(next - target)) < 0.05f)
             {
                 SetNeedleAngle(target);
-                UpdateSegmentsForNeedle(target);
+                UpdateSegmentsForNeedle(target, _currentLevel);
                 _needleCoroutine = null;
                 yield break;
             }
@@ -326,67 +340,18 @@ public class BlackoutGaugePanel : MonoBehaviour
         }
     }
 
-    private void UpdateSegmentsForNeedle(float angle)
+    private void UpdateSegmentsForNeedle(float angle, int? forcedLevel = null)
     {
-        int activeLevel = AngleToLevel(angle);
+        int activeLevel = forcedLevel ?? AngleToLevel(angle);
 
         for (int i = 0; i < segments.Length; i++)
         {
             if (segments[i] == null) continue;
             bool active = i == activeLevel;
-            segments[i].ApplyDisplayColor(active ? ActiveSegmentColors[i] : segments[i].BaseColor);
+            segments[i].ApplyDisplayColor(active ? ReserveRateStagePalette.GetSegmentColor(i) : segments[i].BaseColor);
             segments[i].OuterRadius = active ? OuterRadiusActive : OuterRadiusNormal;
             segments[i].InnerRadius = InnerRadius;
         }
-    }
-
-    private void RefreshToggleVisual()
-    {
-        bool isCritical = _currentLevel >= 4;
-
-        if (toggleButton != null)
-            toggleButton.interactable = isCritical && !_simCompleted;
-
-        if (toggleDonut == null || toggleLabel == null) return;
-
-        if (!isCritical)
-        {
-            SetToggleDonutColor(ToggleWhite);
-            toggleLabel.text = "";
-        }
-        else if (_simCompleted)
-        {
-            SetToggleDonutColor(ToggleBlack);
-            toggleLabel.color = ToggleWhite;
-            toggleLabel.text = "시뮬레이션\n완료";
-        }
-        else if (_simOn)
-        {
-            SetToggleDonutColor(ToggleBlack);
-            toggleLabel.color = ToggleWhite;
-            toggleLabel.text = "순환단전\n시뮬레이션\nOFF";
-        }
-        else
-        {
-            SetToggleDonutColor(ToggleRedLight);
-            toggleLabel.color = ToggleWhite;
-            toggleLabel.text = "순환단전\n시뮬레이션\nON";
-        }
-    }
-
-    private void SetToggleDonutColor(Color c)
-    {
-        toggleDonut.ApplyDisplayColor(new Color(c.r, c.g, c.b, 1f));
-    }
-
-    private static int ReserveRateToLevel(float reserveRate)
-    {
-        for (int i = 0; i < ReserveRateThresholds.Length; i++)
-        {
-            if (reserveRate >= ReserveRateThresholds[i])
-                return i;
-        }
-        return 4;
     }
 
     private static float ReserveRateToAngle(float reserveRate)
@@ -421,10 +386,10 @@ public class BlackoutGaugePanel : MonoBehaviour
     private static int AngleToLevel(float angle)
     {
         angle = NormalizeAngle(angle);
-        if (angle > SegmentEnd(0)) return 0;
-        if (angle > SegmentEnd(1)) return 1;
-        if (angle > SegmentEnd(2)) return 2;
-        if (angle > SegmentEnd(3)) return 3;
+        if (angle >= SegmentEnd(0)) return 0;
+        if (angle >= SegmentEnd(1)) return 1;
+        if (angle >= SegmentEnd(2)) return 2;
+        if (angle >= SegmentEnd(3)) return 3;
         return 4;
     }
 

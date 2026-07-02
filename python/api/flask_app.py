@@ -14,6 +14,8 @@ Flask REST API — Unity ↔ Python 브릿지.
       [입력] year, month, oni (슬라이더값)
       [예측] 전체 25구 결과 한 번에 반환.
       ONI 슬라이더 변경 시마다 호출 (Unity 측 디바운싱 권장: 300ms).
+      - 과거 + 실측 ONI(is_simulated=false): ASOS·구별기온·KEPCO 소비·EPSIS 공급 실측
+      - 미래 또는 ONI 변경 시: 회귀/XGB 모델 예측
       반환:
         {
           "input":  {"year": 2030, "month": 8, "oni": 1.2},
@@ -46,8 +48,9 @@ Flask REST API — Unity ↔ Python 브릿지.
 
   GET  /predict/oni_range?year=2030&month=8
       [입력] year, month
-      [예측] ONI -2.5 ~ +2.5 (0.1 간격, 총 51개) 각각에 대한 예측값 배열.
-             x축이 ONI인 그래프용: 소비량·공급량·기온·공급예비율 시각화.
+      [예측] ONI -2.5 ~ +2.5 (0.1 간격). 과거 연월은 실측 ONI 지점을 배열에 삽입.
+      - 실측 ONI 포인트: ASOS·KEPCO·EPSIS 관측값 (is_simulated=false)
+      - 나머지 포인트: 모델 예측 (is_simulated=true)
       반환:
         {
           "input": {"year": 2030, "month": 8},
@@ -120,7 +123,7 @@ def _lazy_load() -> None:
 # 헬퍼
 # ---------------------------------------------------------------------------
 
-# 실측 ONI 데이터 (서버 기동 시 1회 로드, is_simulated 판별용)
+# 실측 ONI (서버 기동 시 1회 로드)
 _oni_actual: dict[tuple[int, int], float] | None = None
 
 def _get_oni_actual() -> dict[tuple[int, int], float]:
@@ -145,7 +148,49 @@ def _is_simulated(year: int, month: int, oni: float) -> bool:
     actual = _get_oni_actual()
     if (year, month) not in actual:
         return True  # 미래
-    return abs(actual[(year, month)] - oni) > 0.05  # ONI 변경 여부 (±0.05 허용)
+    return bool(abs(float(actual[(year, month)]) - oni) > 0.05)
+
+
+def _resolve_oni(year: int, month: int, oni: float) -> float:
+    """과거 실측 ONI가 있으면 그 값을 사용 (슬라이더 초기 로드·실측 모드)."""
+    actual = _get_oni_actual().get((year, month))
+    if actual is not None and not _is_simulated(year, month, oni):
+        return round(actual, 2)
+    return oni
+
+
+def _resolve_month_result(year: int, month: int, oni_input: float) -> tuple[bool, float, dict]:
+    """
+    실측 ONI → 관측 데이터 전체, 시뮬 ONI → 모델 예측.
+    반환: (is_simulated, oni_for_model, result_dict)
+    """
+    from python.loader.observed_month import build_observed_month
+
+    simulated     = _is_simulated(year, month, oni_input)
+    oni_for_model = _resolve_oni(year, month, oni_input)
+
+    if not simulated:
+        observed = build_observed_month(year, month)
+        if observed is not None:
+            return bool(simulated), float(oni_for_model), observed
+
+    return bool(simulated), float(oni_for_model), _predict_one_month(year, month, oni_for_model)
+
+
+def _build_oni_range_values(year: int, month: int) -> list[float]:
+    """ONI -2.5~+2.5 (0.1). 과거 실측 ONI가 있으면 가장 가까운 격자점을 실측값으로 치환."""
+    import numpy as np
+
+    values = [round(v, 1) for v in np.arange(-2.5, 2.6, 0.1)]
+    actual = _get_oni_actual().get((year, month))
+    if actual is None:
+        return values
+
+    actual_r = round(actual, 2)
+    idx = min(range(len(values)), key=lambda i: abs(values[i] - actual_r))
+    if abs(values[idx] - actual_r) <= 0.05:
+        values[idx] = actual_r
+    return values
 
 
 def _oni_status(oni: float) -> str:
@@ -269,29 +314,29 @@ def predict():
     """
     _lazy_load()
     try:
-        year  = int(request.args["year"])
-        month = int(request.args["month"])
-        oni   = float(request.args["oni"])
+        year      = int(request.args["year"])
+        month     = int(request.args["month"])
+        oni_input = float(request.args["oni"])
     except (KeyError, ValueError) as e:
         return jsonify({"error": f"파라미터 오류: {e}"}), 400
 
     from python.simulation.alert_level import get_alert_level
 
-    base        = _predict_one_month(year, month, oni)
-    alert       = get_alert_level(base["supply"]["reserve_rate"])
+    simulated, oni_for_model, base = _resolve_month_result(year, month, oni_input)
+    alert = get_alert_level(base["supply"]["reserve_rate"])
 
     predicted = {
         "asos_temp":   base["asos_temp"],
         "alert_level": int(alert),
         "alert_label": alert.label_ko,
-        "oni_status":  _oni_status(oni),
+        "oni_status":  _oni_status(oni_for_model),
         "supply":      base["supply"],
         "regions":     base["regions"],
     }
 
     return jsonify({
-        "input":        {"year": year, "month": month, "oni": oni},
-        "is_simulated": _is_simulated(year, month, oni),
+        "input":        {"year": year, "month": month, "oni": oni_for_model},
+        "is_simulated": bool(simulated),
         "predicted":    predicted,
     })
 
@@ -301,45 +346,59 @@ def predict_oni_range():
     """
     ONI 범위 그래프용. GET /predict/oni_range?year=2030&month=8
 
-    ONI -2.5 ~ +2.5 (0.1 간격, 51개 포인트)에 대한 예측값 배열.
-    x축=ONI 그래프: 소비량·공급량·기온·공급예비율 변화 시각화.
+    /predict 와 동일: 실측 ONI 격자점 → 관측 데이터, 나머지 → 모델 예측.
     """
-    _lazy_load()
     try:
         year  = int(request.args["year"])
         month = int(request.args["month"])
     except (KeyError, ValueError) as e:
         return jsonify({"error": f"파라미터 오류: {e}"}), 400
 
-    import numpy as np
-    oni_values = [round(v, 1) for v in np.arange(-2.5, 2.6, 0.1)]
-
+    from python.loader.observed_month import build_observed_month
     from python.simulation.alert_level import get_alert_level
+
+    oni_values     = _build_oni_range_values(year, month)
+    observed_month = build_observed_month(year, month)
+    actual_oni     = _get_oni_actual().get((year, month))
+
+    if any(_is_simulated(year, month, v) for v in oni_values):
+        _lazy_load()
 
     oni_range_data = []
     for oni_val in oni_values:
-        r = _predict_one_month(year, month, oni_val)
+        simulated = _is_simulated(year, month, oni_val)
+        if not simulated and observed_month is not None:
+            r = observed_month
+        else:
+            r = _predict_one_month(year, month, oni_val)
+
         seoul_total = round(sum(reg["total_consumption_mwh"] for reg in r["regions"]), 2)
         alert = get_alert_level(r["supply"]["reserve_rate"])
         oni_range_data.append({
-            "oni":                          oni_val,
-            "asos_temp":                    r["asos_temp"],
-            "supply_mw":                    r["supply"]["supply_mw"],
-            "reserve_rate":                 r["supply"]["reserve_rate"],
+            "oni":                          float(oni_val),
+            "is_simulated":                 bool(simulated),
+            "asos_temp":                    float(r["asos_temp"]),
+            "supply_mw":                    float(r["supply"]["supply_mw"]),
+            "reserve_rate":                 float(r["supply"]["reserve_rate"]),
             "alert_level":                  int(alert),
-            "seoul_total_consumption_mwh":  seoul_total,
+            "alert_label":                  alert.label_ko,
+            "seoul_total_consumption_mwh":  float(seoul_total),
             "regions": [
                 {
                     "gu":                    reg["gu"],
-                    "ta_gu":                 reg["ta_gu"],
-                    "total_consumption_mwh": reg["total_consumption_mwh"],
+                    "ta_gu":                 float(reg["ta_gu"]),
+                    "total_consumption_mwh": float(reg["total_consumption_mwh"]),
                 }
                 for reg in r["regions"]
             ],
         })
 
     return jsonify({
-        "input":     {"year": year, "month": month},
+        "input": {
+            "year":       year,
+            "month":      month,
+            "actual_oni": round(actual_oni, 2) if actual_oni is not None else None,
+        },
         "oni_range": oni_range_data,
     })
 
@@ -358,9 +417,9 @@ def blackout_simulation():
     data = request.get_json(force=True)
 
     try:
-        year  = int(data["year"])
-        month = int(data["month"])
-        oni   = float(data["oni"])
+        year      = int(data["year"])
+        month     = int(data["month"])
+        oni_input = float(data["oni"])
     except (KeyError, ValueError) as e:
         return jsonify({"error": f"파라미터 오류: {e}"}), 400
 
@@ -368,7 +427,7 @@ def blackout_simulation():
     from python.simulation.blackout import run_blackout
     from python.loader.mapping_loader import get_building_score_map
 
-    predicted   = _predict_one_month(year, month, oni)
+    simulated, oni_for_model, predicted = _resolve_month_result(year, month, oni_input)
     supply_info = predicted["supply"]
     alert       = get_alert_level(supply_info["reserve_rate"])
 
@@ -400,7 +459,8 @@ def blackout_simulation():
     ]
 
     return jsonify({
-        "input":              {"year": year, "month": month, "oni": oni},
+        "input":              {"year": year, "month": month, "oni": oni_for_model},
+        "is_simulated":       bool(simulated),
         "alert_level":        int(alert),
         "alert_label":        alert.label_ko,
         "supply_mw":          supply_info["supply_mw"],
