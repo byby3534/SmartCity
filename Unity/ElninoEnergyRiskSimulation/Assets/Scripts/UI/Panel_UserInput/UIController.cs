@@ -37,6 +37,8 @@ public class UIController : MonoBehaviour
     private int? _year;
     private int? _month;
     private bool _sliderWired;
+    private bool _blackoutSimulationRunning;
+    private BlackoutSimulationController _simulationController;
 
     private void Awake()
     {
@@ -150,6 +152,19 @@ public class UIController : MonoBehaviour
         return null;
     }
 
+    private void OnEnable()
+    {
+        _simulationController = FindFirstObjectByType<BlackoutSimulationController>();
+        if (_simulationController != null)
+            _simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationToggled;
+    }
+
+    private void OnDisable()
+    {
+        if (_simulationController != null)
+            _simulationController.OnBlackoutSimulationToggled -= HandleBlackoutSimulationToggled;
+    }
+
     private void OnDestroy()
     {
         if (datePicker != null)
@@ -236,8 +251,16 @@ public class UIController : MonoBehaviour
             oniSlider.gameObject.SetActive(active);
 
         if (oniSlider != null)
-            oniSlider.interactable = active;
+            oniSlider.interactable = active && !_blackoutSimulationRunning;
 
         OnOniPanelVisibilityChanged?.Invoke(active);
+    }
+
+    private void HandleBlackoutSimulationToggled(bool isOn)
+    {
+        _blackoutSimulationRunning = isOn;
+
+        if (oniSlider != null)
+            oniSlider.interactable = IsOniPanelVisible && !isOn;
     }
 }
