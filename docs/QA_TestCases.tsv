@@ -1,0 +1,56 @@
+TC ID	대분류(진행 단계)	중분류(화면/패널)	소분류(요소)	Preconditions(사전조건)	Test procedure(테스트 절차)	API 확인(요청/응답)	Expected result(기대 결과)
+TC_PREP_001	사전 준비	Unity Editor	Tools > Bake Seoul Building Data	seoul_buildings.geojson 파일 존재	Unity 메뉴 Tools > Bake Seoul Building Data 실행	해당없음(로컬 GeoJSON 처리)	Assets/Resources/Districts/{구ID}/District.bytes 및 PolygonData.bytes 생성, Console에 "모든 구역 바이너리 빌드 완료!" 로그 출력
+TC_PREP_002	사전 준비	Unity Editor	Tools > Bake Terrain Heights	TC_PREP_001 완료, 씬에 Cesium3DTileset·BuildingManager 존재	Play 모드 진입 > Tools > Bake Terrain Heights 창 열기 > Bake 실행	해당없음(Cesium 로컬 샘플링)	25개 구 각각 Assets/Resources/Districts/{구ID}/TerrainHeights.bytes 생성, 상태창에 "전체 완료" 표시
+TC_PREP_003	사전 준비	API 서버	Health Check	Python 환경·모델 pkl·.env 준비	GET /health 호출	[요청] GET /health / [응답] 200 {"status":"ok"}	서버 정상 기동 확인
+TC_INIT_001	초기 진입	메인 씬	초기 실행 로그(시스템 초기화)	TC_PREP_001·002 완료	시뮬레이션 씬 Play 실행 > Unity Console 로그 확인	해당없음(로컬 Resources 바이너리 로드)	Console에 아래 순서로 로그 출력: ①[GuBoundaryDecal] 완료 — 구 25개, 텍스처 4096px ②[CityManager] Start() - 구역별 건물 데이터 로드 및 메쉬 생성 시작... ③[CityManager] 렌더링 버퍼 초기화 완료 (N개, 8바이트/건물) ④[DistrictManager] 건물 매핑 테이블 구축 완료 (N개) ⑤[DistrictManager] GPU 버퍼 준비 완료 (N개 건물) ⑥[BuildingManager] Tileset 준비 완료. 구역별 메시 생성 시작... (N=Bake 건수, 예: 543,485) / 연·월 미선택 상태이므로 ONI·predict API 호출 없음
+TC_INIT_002	초기 진입	메인 씬	건물 오브젝트	TC_INIT_001 진행 중	TC_INIT_001 ⑥번 로그 이후 약 2~3초 대기 > 3D 뷰·Console 확인	해당없음	Console에 "[BuildingManager] 모든 구역 메시 생성 완료." 출력, 25개 구 건물 메시가 좌표에 맞게 누락/중복 없이 표시
+TC_INIT_003	초기 진입	메인 씬	건물 오브젝트(종로구)	TC_INIT_002 완료	3D 뷰에서 종로구(11110) 건물 표시 확인	해당없음	종로구 건물 기본 활성 표시, 나머지 구는 비활성 상태(구 선택·카메라 이동 시 활성화됨)
+TC_INIT_004	초기 진입	Panel_HUD_Info	실시간 기온	API 서버 기동, 씬 진입	HUD 상단 기온 영역 확인	[요청] GET /weather/current (Start 시 1회, 이후 3600초 주기) / [응답] 200	HUD에 현재 기온 수치 표시
+TC_INIT_005	초기 진입	SimulationDatePicker	초기 상태	씬 최초 진입, 연·월 미선택	DatePicker 상태 텍스트·ONI 패널 확인	해당없음	상태 텍스트 "연/월을 선택하세요", 체크 아이콘 비활성, Panel_ONI_Adjust 숨김 상태
+TC_INIT_006	초기 진입	메인 씬	건물 오브젝트(오류)	TerrainHeights 미생성 구 존재(Bake 미실행)	Bake Terrain Heights 미실행 상태로 씬 진입	해당없음	Console Error "TerrainHeights 없음. Tools > Bake Terrain Heights 를 먼저 실행하세요" 출력, 해당 구 메시 미생성
+TC_DATE_001	연월 선택	SimulationDatePicker	연 카드[버튼]	TC_INIT_005 상태	연 카드 클릭 > 연도 팝업에서 2030 선택	해당없음	연 카드에 "2030" 표시, 월 미선택 상태이므로 API 미호출
+TC_DATE_002	연월 선택	SimulationDatePicker	월 카드[버튼]	TC_DATE_001에서 연도 선택 완료	월 카드 클릭 > 8월 선택	해당없음	월 카드에 "8" 표시, 연+월 모두 채워지면 자동으로 API 호출 트리거
+TC_DATE_003	연월 선택	DataManager	API 병렬 호출	연 2030·월 8 확정 직후	네트워크 탭 또는 Console 모니터링	[요청] GET /oni?year=2030&month=8 및 GET /predict/oni_range?year=2030&month=8 (병렬) / [응답] 200	두 요청이 동시 전송되고, /oni 응답 완료 전까지 ONI 패널 비활성(로딩 중) 상태 유지
+TC_DATE_004	연월 선택	Panel_ONI_Adjust	ONI 슬라이더	TC_DATE_003의 /oni 응답 완료	/oni 응답 수신 후 UI 확인	[응답] {"output":{"oni":값}}	Panel_ONI_Adjust 표시, 슬라이더 초기값이 응답 oni와 일치, 유형(라니냐/중립/엘니뇨) 텍스트 표시
+TC_DATE_005	연월 선택	SimulationDatePicker	상태 텍스트	TC_DATE_004 완료	DatePicker 상태 영역 확인	해당없음	상태 텍스트 "기준 ONI 데이터 로드됨" + 체크 아이콘 활성
+TC_DATE_006	연월 선택	DataManager	Predict 연쇄 호출	TC_DATE_003의 /oni 완료	/oni 직후 predict 호출 확인	[요청] GET /predict?year=2030&month=8&oni={oni값} / [응답] 200, predicted.regions 25개	서울 25개 구 기온·소비·경보·건물유형 점수 파싱 완료, 미니맵·차트·게이지에 반영
+TC_DATE_007	연월 선택	Panel_ONI_Trend	ONI 범위 차트	TC_DATE_003의 /predict/oni_range 완료	Panel_ONI_Trend 차트 확인	[응답] oni_range 51포인트(-2.5~+2.5)	기온·공급·소비·예비율 라인 차트 표시, 라니냐/중립/엘니뇨 배경 영역 및 현재 ONI 수직선 표시
+TC_DATE_008	연월 선택	DataManager	Blackout API(심각)	alert_level=4가 나오는 연·월·ONI 조합	해당 조건으로 연·월 선택	[요청] GET /predict(alert_level=4) 후 POST /blackout_simulation body {"year":Y,"month":M,"oni":V} / [응답] 200	districts_order·blackout_items 파싱 완료, 순환단전 버튼 활성 조건 충족
+TC_DATE_009	연월 선택	DataManager	Blackout API(비심각)	alert_level < 4 연·월	일반 연·월 선택	[요청] GET /predict(alert_level<4), POST /blackout_simulation 미호출	블랙아웃 순회 목록 비움, 순환단전 버튼 회색 비활성
+TC_DATE_010	연월 선택	SimulationDatePicker	API 실패	API 서버 중지 상태	연·월 선택	[요청] GET /oni 연결 실패	Console Error 출력, ONI 패널 미표시, 상태 텍스트 "연/월을 선택하세요" 유지
+TC_DATE_011	연월 선택	SimulationDatePicker	연·월 재선택	이전 연·월 로드 완료	다른 연·월로 변경	새 연월로 GET /oni, GET /predict/oni_range, GET /predict 재호출	이전 차트·색상이 초기화된 후 새 결과로 갱신(잔상 없음)
+TC_ONI_001	ONI 설정	Panel_ONI_Slider	ONI 슬라이더	TC_DATE_004 완료	슬라이더를 -2.5~+2.5 범위 내 임의 값으로 드래그	해당없음(드래그 중 API 없음)	슬라이더 값·유형 텍스트가 실시간 갱신되며 -2.5~+2.5 범위를 벗어나지 않음
+TC_ONI_002	ONI 설정	Panel_ONI_Adjust	ONI 영향 4패널	/predict/oni_range 로드 완료	슬라이더 드래그 중 4패널 관찰	해당없음(캐시 데이터 보간)	Panel_Temperature·Panel_EnergyUsage·Panel_EnergySupply·Panel_ReserveRate 비율이 실시간 보간되어 표시
+TC_ONI_003	ONI 설정	Panel_ONI_Trend	ONI 차트	oni_range 로드 완료	슬라이더 드래그 중 차트·게이지·미니맵 확인	해당없음	현재 ONI 수직선(MarkLine) 이동, 차트·게이지·미니맵이 동시에 즉시 보간됨
+TC_ONI_004	ONI 설정	Panel_ONI_Slider	ONI 슬라이더(손 뗌)	TC_ONI_001 드래그 완료	슬라이더에서 손 뗌(PointerUp)	[요청] 150ms 후 GET /predict?year=&month=&oni={슬라이더값} / [응답] 200	건물 색상·구별 패널·경보 단계가 새 ONI 값으로 갱신
+TC_ONI_005	ONI 설정	Btn_BlakcoutSimulation	순환 단전 버튼	ONI 변경으로 reserve_rate < 5%(level 4)	슬라이더 조정 후 손 뗌 > predict 완료	[요청] GET /predict + (alert_level=4 시) POST /blackout_simulation	순환단전 버튼 빨간색 활성, 라벨 "순환 단전 Start"
+TC_ONI_006	ONI 설정	Panel_ONI_Slider	ONI 슬라이더(잠금)	순환 단전 실행 중	슬라이더 드래그 시도	해당없음	슬라이더 interactable=false로 조작 불가
+TC_VIS_001	결과 확인	Panel_PowerStatus	경보 단계·Dot	/predict 완료	Panel_PowerStatus 확인	[응답] predicted.alert_level, alert_label	단계명(정상/관심/주의/경계/심각)과 Dot 색상이 alert_level과 정확히 일치
+TC_VIS_002	결과 확인	Panel_PowerStatus	예비율 게이지	/predict 완료	BlackoutGaugePanel 도넛·바늘 확인	[응답] predicted.supply.reserve_rate	게이지 바늘 위치·세그먼트 색상이 예비율 수치 구간과 일치
+TC_VIS_003	결과 확인	Panel_HUD_Info	HUD 날짜·기온·경보	predict 완료	HUD 상단 정보 확인	[응답] predicted.asos_temp, alert_label	선택한 연·월, 예측 기온, 경보 dot이 예측 결과와 일치하여 표시
+TC_VIS_004	결과 확인	미니맵	구별 색상(cmap)	/predict + oni_range 완료	미니맵 25개 구 색상 확인	[응답] regions[].total_consumption_mwh	구별 소비량에 따라 색상이 구분되어 표시되며 범례와 일치
+TC_VIS_005	결과 확인	3D 뷰	건물 색상	/predict 완료, 활성 구 표시	3D 건물 색상 확인	[응답] regions[].building_type[].reduction_need_score	건물유형별 수요감축 필요도에 따라 건물 색상이 구분되어 표시
+TC_VIS_006	결과 확인	Panel_EnergyRatio	구별 전력 도넛	predict 완료, 구 미선택(서울 전체)	Panel_EnergyRatio 도넛·범례 확인	[응답] regions 합산 usage	7개 용도별 도넛과 범례 수치가 표시되며 시각화와 값이 일치
+TC_VIS_007	결과 확인	Panel_EnergyRatio	구별 전력 도넛(구 선택)	predict 완료	미니맵에서 강남구 클릭	해당없음	강남구 용도별 소비량 기준으로 도넛·범례가 갱신됨
+TC_VIS_008	결과 확인	Panel_ONI_Trend	차트(구 선택)	predict·oni_range 완료	미니맵에서 다른 구 클릭	해당없음	차트 제목·구별 시리즈가 선택한 구 기준으로 변경됨
+TC_MAP_001	미니맵	미니맵	구 클릭	predict 완료, 순환단전 미실행	미니맵에서 임의 구 클릭	해당없음	구 아웃라인·툴팁 표시, 3D 카메라가 해당 구로 부드럽게 이동
+TC_MAP_002	미니맵	3D 뷰	구 경계 Decal	구 클릭	3D 뷰에서 구 경계 확인	해당없음	GuBoundaryDecal로 선택한 구의 3D 경계가 표시됨
+TC_MAP_003	미니맵	MainCamera	카메라 이동 제한	순환 단전 실행 중	미니맵 구 클릭 시도	해당없음	순환단전 중에는 수동 카메라 이동이 무시되고 구 순회 카메라가 우선됨
+TC_BLK_001	순환 단전	Btn_BlakcoutSimulation	버튼 비활성	alert_level < 4(예비율 5% 이상)	ONI 패널 하단 버튼 확인	해당없음	버튼 회색 비활성, 라벨 "순환 단전 Start", 클릭 불가
+TC_BLK_002	순환 단전	Btn_BlakcoutSimulation	버튼 활성	alert_level=4, blackout 데이터 로드 완료	버튼 상태 확인	POST /blackout_simulation 사전 완료	버튼 빨간색 활성, 라벨 "순환 단전 Start"
+TC_BLK_003	순환 단전	Btn_BlakcoutSimulation	시뮬 시작	TC_BLK_002 상태	[순환 단전 Start] 클릭	추가 API 없음(사전 로드 데이터 사용)	1초 이내 버튼 라벨 "순환 단전 Stop"으로 변경, 구 순회 시뮬레이션 시작
+TC_BLK_004	순환 단전	3D 뷰	건물 정전 연출	TC_BLK_003 실행 중	첫 번째 구 순회 관찰	해당없음	해당 구 건물이 수요감축 필요도 높은 순서로 정전 연출, 카메라 해당 구로 이동
+TC_BLK_005	순환 단전	미니맵	구 깜박임	TC_BLK_003 실행 중	현재 단전 구 미니맵 확인	해당없음	단전 중인 구가 미니맵에서 깜박임으로 표시됨
+TC_BLK_006	순환 단전	Panel_Log	건물유형 로그	TC_BLK_003 실행 중	로그 패널 확인	[응답] blackout_items[].building_type, reduction_need_score	0.5초 간격으로 건물유형별 로그가 순서대로 출력된 후 다음 구로 진행
+TC_BLK_007	순환 단전	Panel_PowerStatus	게이지 바늘	구별 순회 중	예비율 게이지 확인	해당없음	현재 단전 구 소비량에 맞게 게이지 바늘이 이동
+TC_BLK_008	순환 단전	Btn_BlakcoutSimulation	시뮬 중단	TC_BLK_003 실행 중	[순환 단전 Stop] 클릭	해당없음	순회 즉시 중단, 건물 정전 연출 복구, 버튼 라벨 "순환 단전 Start"로 복귀
+TC_BLK_009	순환 단전	Btn_BlakcoutSimulation	시뮬 완료	전체 구 순회 완료	자동 종료까지 대기	해당없음	라벨 "시뮬레이션 완료" 약 3초 표시 후 Start 버튼으로 복귀
+TC_BLK_010	순환 단전	BlackoutSimulationController	데이터 없음	blackout_items 빈 목록 상태	Start 클릭	해당없음	Console Warning "순회할 구 데이터가 없습니다" 출력, 시뮬레이션 자동 취소
+TC_BLK_011	순환 단전	BlackoutSimulationController	경보 하락	순환단전 실행 중 ONI 변경으로 alert_level < 4	슬라이더로 예비율 상승 후 predict	[요청] GET /predict(alert_level<4)	실행 중이던 시뮬레이션이 자동 중단됨
+TC_API_001	API 검증	/oni	슬라이더 초기값	API 서버 기동	GET /oni?year=2025&month=8	[요청] GET /oni?year=2025&month=8 / [응답] 200, {"output":{"oni":실측값}}	과거 연월 실측 ONI 값 반환, 미래 연월은 0.0 반환
+TC_API_002	API 검증	/predict	25구 예측	API 서버 기동	GET /predict?year=2030&month=8&oni=1.2	[요청] GET /predict?year=2030&month=8&oni=1.2 / [응답] 200	predicted.regions 길이=25, alert_level 0~4 범위, 기온·소비·공급·건물유형 점수 정상 포함
+TC_API_003	API 검증	/predict/oni_range	차트 데이터	API 서버 기동	GET /predict/oni_range?year=2030&month=8	[요청] GET /predict/oni_range?year=2030&month=8 / [응답] 200	oni_range 길이=51, ONI -2.5~+2.5 0.1 간격
+TC_API_004	API 검증	/blackout_simulation	순회 순서	alert_level=4 조건	POST /blackout_simulation body {year,month,oni}	[요청] POST /blackout_simulation / [응답] 200, districts_order·blackout_items	소비량 내림차순 25구 반환, blackout_items가 비어있지 않은 구만 순회 대상
+TC_API_005	API 검증	/weather/current	실시간 기온	API 서버·KMA 키 설정	GET /weather/current	[요청] GET /weather/current / [응답] 200, weather 객체	현재 기온 수치가 정상 반환됨
+TC_WEB_001	WebGL 배포	ApiClient	서버 URL	WebGL 빌드, nginx /api 프록시	WebGL 빌드 실행 후 연·월 선택	[요청] GET /api/oni?... (same-origin)	CORS 오류 없이 API 정상 호출됨
+TC_WEB_002	WebGL 배포	C++ WASM	건물 렌더링	WebGL 빌드, Bake 완료	씬 진입 후 건물 표시 확인	해당없음	SeoulBuildingProcessor WASM으로 건물 메시가 정상 생성됨

@@ -389,8 +389,9 @@ pip install -r requirements.txt
 `.env` 파일 (프로젝트 루트):
 
 ```
-OPEN_API=your_service_key_here
+KMA_API_KEY=your_kma_service_key_here
 FLASK_PORT=5001
+FLASK_DEBUG=0
 ```
 
 ### 모델 학습
@@ -401,22 +402,64 @@ python -m python.train_pipeline
 
 ### Flask API 서버 실행
 
+개발 (단독):
+
 ```bash
-python -m python.api.flask_app
+FLASK_DEBUG=1 python -m python.api.flask_app
 # 포트: 5001 (FLASK_PORT 환경변수)
+```
+
+프로덕션 (gunicorn):
+
+```bash
+./deploy/scripts/start_api.sh
 ```
 
 ### Unity 실행
 
 - Unity 에디터: `Unity/ElninoEnergyRiskSimulation/`
 - Flask 서버 5001 포트 실행 필요
-- `ApiClient.serverUrl` = `http://localhost:5001`
-- 작업 씬: `Assets/Scenes/UIScene 2.unity`
+- `ApiClient.serverUrl` = `http://localhost:5001` (에디터 기본값)
+- 빌드 씬: `Assets/Scenes/UIScene 3.unity`
 - `TestPrefab > MinimapManager`에 `MinimapManager` + `MinimapColorController` 동일 GO 배치
 
 ---
 
-## 8. API 명세
+## 8. WebGL 배포
+
+상세 가이드: [`deploy/README.md`](deploy/README.md)
+
+### 요약
+
+1. Unity **WebGL Build** → `www/`에 산출물 복사
+2. 서버에 모델·데이터 파일 배치 (`python/model/artifacts`, `data/`)
+3. gunicorn으로 API 실행 (`./deploy/scripts/start_api.sh`)
+4. nginx로 `/` → WebGL, `/api/` → Flask 프록시
+5. WebGL 빌드는 `ApiClient`가 자동으로 `/api` 사용 (same-origin, CORS 불필요)
+
+### 로컬 통합 테스트
+
+```bash
+brew install nginx
+./deploy/scripts/local_stack.sh
+# http://localhost:8080/          WebGL
+# http://localhost:8080/api/health API
+```
+
+### WebGL Player Settings (적용됨)
+
+| 항목 | 값 |
+|------|-----|
+| 빌드 씬 | UIScene 3 |
+| 초기 메모리 | 128 MB |
+
+> UIScene 3은 XChart를 사용하지 않습니다. `XCHART` 심볼은 Standalone 전용입니다.
+
+Cesium Ion 배포 URL 등록 필수.
+
+---
+
+## 9. API 명세
 
 ### `GET /health`
 
@@ -457,7 +500,7 @@ ONI -2.5 ~ +2.5 (0.1 간격, 51포인트). 차트·슬라이더 보간용.
 
 ---
 
-## 9. 시뮬레이션 로직
+## 10. 시뮬레이션 로직
 
 ### 경보단계 (공급예비율 기준)
 
@@ -498,7 +541,7 @@ reduction_need_draft = 용도정규화사용률 × 공급위험도
 
 ---
 
-## 10. 데이터 현황
+## 11. 데이터 현황
 
 | 데이터                   | 경로                                            | 범위                | 상태    |
 | ------------------------ | ----------------------------------------------- | ------------------- | ------- |
@@ -510,7 +553,7 @@ reduction_need_draft = 용도정규화사용률 × 공급위험도
 
 ---
 
-## 11. 알려진 데이터 품질 이슈
+## 12. 알려진 데이터 품질 이슈
 
 | 이슈                  | 원인                                     | 적용된 수정                                   |
 | --------------------- | ---------------------------------------- | --------------------------------------------- |
@@ -521,7 +564,7 @@ reduction_need_draft = 용도정규화사용률 × 공급위험도
 
 ---
 
-## 12. 데이터 시각화
+## 13. 데이터 시각화
 
 ### 분석 개요
 
