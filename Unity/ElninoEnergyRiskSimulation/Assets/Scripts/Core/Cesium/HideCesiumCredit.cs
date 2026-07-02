@@ -28,7 +28,7 @@ public class HideCesiumCredit : MonoBehaviour
         HideAllCreditSystems();
     }
 
-    private static bool HideAllCreditSystems()
+    private bool HideAllCreditSystems()
     {
         bool found = false;
 
