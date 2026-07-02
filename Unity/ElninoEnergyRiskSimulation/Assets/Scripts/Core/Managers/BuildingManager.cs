@@ -45,10 +45,6 @@ public struct NativeVertex
 
 public class BuildingManager : MonoBehaviour
 {
-    [Header("매니저 연결")]
-    [SerializeField] private DistrictManager districtManager;
-    [SerializeField] private BlackoutSimulationController simulationController;
-
     public Cesium3DTileset terrainTileset;
     public CesiumGeoreference cesiumGeoreference;
     public Material buildingMaterial;
@@ -68,49 +64,21 @@ public class BuildingManager : MonoBehaviour
     private Dictionary<int, int[]> sortedDistrictIndices = new();
     private Dictionary<int, GameObject> districtRoots = new();
 
+    private Coroutine blackoutCoroutine;
+
+    private bool _isSimulationActive;
+    private DistrictType _selectedDistrict = DistrictType.None;
+
+    [Header("매니저 연결")]
+    [SerializeField] private DistrictManager districtManager;
+    [SerializeField] private BlackoutSimulationController simulationController;
+    [SerializeField] private MinimapManager minimapManager;
+
     [Header("정전 연출 설정")]
     [SerializeField] private int buildingsPerBatch = 100;
     [SerializeField] private float secondsBetweenBatch = 0.05f;
     [SerializeField] private float blackoutHoldDuration = 3.0f;
     [SerializeField] private float secondsBetweenRestoreBatch = 0.03f;
-    private Coroutine blackoutCoroutine;
-
-    [Header("구 선택")]
-    [SerializeField] private MinimapManager minimapManager;
-
-    private bool _isSimulationActive;
-    private DistrictType _selectedDistrict = DistrictType.None;
-
-    public void FlushBufferToGPU()
-    {
-        if (!bufferDirty || cachedRenderData == null || renderBuffer == null)
-            return;
-
-        renderBuffer.SetData(cachedRenderData);
-        bufferDirty = false;
-    }
-
-    /// <summary>
-    /// 전체 건물의 NativeBuildingData를 읽어온다 (구/건물유형 매핑용).
-    /// 렌더링과는 무관하며, DistrictManager가 reductionValue 계산 시 참조.
-    /// </summary>
-    public NativeBuildingData[] GetFullBuildingData()
-    {
-        int count = GetBuildingBufferCount();
-        if (count == 0) return Array.Empty<NativeBuildingData>();
-
-        NativeBuildingData[] data = new NativeBuildingData[count];
-        IntPtr ptr = GetBuildingBufferPointer();
-        int stride = Marshal.SizeOf(typeof(NativeBuildingData));
-
-        for (int i = 0; i < count; i++)
-        {
-            IntPtr itemPtr = new IntPtr(ptr.ToInt64() + (i * stride));
-            data[i] = Marshal.PtrToStructure<NativeBuildingData>(itemPtr);
-        }
-
-        return data;
-    }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     private const string SeoulBuildingProcessor = "__Internal";
@@ -171,6 +139,12 @@ public class BuildingManager : MonoBehaviour
     [DllImport(SeoulBuildingProcessor)]
     private static extern bool GetDistrictRange(int districtId, out int startIndex, out int count);
 
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref districtManager);
+        SceneRefs.Resolve(ref simulationController);
+        SceneRefs.Resolve(ref minimapManager);
+    }
 
     private void Start()
     {
@@ -197,6 +171,12 @@ public class BuildingManager : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!SceneRefs.RequireAll(this,
+            (districtManager, nameof(districtManager)),
+            (simulationController, nameof(simulationController)),
+            (minimapManager, nameof(minimapManager))))
+            return;
+
         simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationStart;
         simulationController.OnBlackoutDistrictChanged += HandleDistrictBlackedOut;
         simulationController.OnActiveDistrictsChanged += HandleActiveDistrictsChanged;
@@ -206,11 +186,16 @@ public class BuildingManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (!SceneRefs.RequireAll(this,
+            (districtManager, nameof(districtManager)),
+            (simulationController, nameof(simulationController)),
+            (minimapManager, nameof(minimapManager))))
+            return;
+
         simulationController.OnBlackoutSimulationToggled -= HandleBlackoutSimulationStart;
         simulationController.OnBlackoutDistrictChanged -= HandleDistrictBlackedOut;
         simulationController.OnActiveDistrictsChanged -= HandleActiveDistrictsChanged;
-        if (minimapManager != null)
-            minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+        minimapManager.OnDistrictSelected -= HandleDistrictSelected;
     }
 
     IEnumerator InitializeDistrict()
@@ -269,6 +254,28 @@ public class BuildingManager : MonoBehaviour
             if (handle.IsAllocated) handle.Free();
         }
     }
+
+    /// <summary>
+    /// 전체 건물의 NativeBuildingData를 읽어온다 (구/건물유형 매핑용).
+    /// 렌더링과는 무관하며, DistrictManager가 reductionValue 계산 시 참조.
+    /// </summary>
+    public NativeBuildingData[] GetFullBuildingData()
+    {
+        int count = GetBuildingBufferCount();
+        if (count == 0) return Array.Empty<NativeBuildingData>();
+
+        NativeBuildingData[] data = new NativeBuildingData[count];
+        IntPtr ptr = GetBuildingBufferPointer();
+        int stride = Marshal.SizeOf(typeof(NativeBuildingData));
+
+        for (int i = 0; i < count; i++)
+        {
+            IntPtr itemPtr = new IntPtr(ptr.ToInt64() + (i * stride));
+            data[i] = Marshal.PtrToStructure<NativeBuildingData>(itemPtr);
+        }
+
+        return data;
+    }
     #endregion
 
     #region MeshSpawn
@@ -314,6 +321,7 @@ public class BuildingManager : MonoBehaviour
 
         DistrictObject districtObject = districtRoot.AddComponent<DistrictObject>();
         districtObject.districtId = districtId;
+        districtObject.data = new DistrictData();
         OnDistrictObjectCreated?.Invoke(districtObject);
 
         districtRoot.AddComponent<MeshFilter>().mesh = mesh;
@@ -435,6 +443,15 @@ public class BuildingManager : MonoBehaviour
             IntPtr itemPtr = new IntPtr(ptr.ToInt64() + (i * stride));
             cachedRenderData[i] = Marshal.PtrToStructure<BuildingRenderData>(itemPtr);
         }
+    }
+
+    public void FlushBufferToGPU()
+    {
+        if (!bufferDirty || cachedRenderData == null || renderBuffer == null)
+            return;
+
+        renderBuffer.SetData(cachedRenderData);
+        bufferDirty = false;
     }
     #endregion
 
