@@ -21,8 +21,7 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private void Awake()
     {
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
+        SceneRefs.Resolve(ref dataManager);
     }
 
     public void RequestToggle(bool isOn)
@@ -57,11 +56,8 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (dataManager == null)
-        {
-            Debug.LogError("[BlackoutSimulationController] DataManager가 연결되지 않았습니다.");
+        if (!SceneRefs.Require(this, dataManager, nameof(dataManager)))
             return;
-        }
 
         dataManager.OnPowerDataUpdated          += HandlePowerDataUpdated;
         dataManager.OnBlackoutSimulationParsed  += HandleBlackoutSimulationParsed;
