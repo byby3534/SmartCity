@@ -19,6 +19,11 @@ public class BlackoutSimulationController : MonoBehaviour
     private bool                       _isOn;
     private bool                       _waitingForFinish;
 
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref dataManager);
+    }
+
     public void RequestToggle(bool isOn)
     {
         if (_isOn == isOn) return;
@@ -51,12 +56,17 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!SceneRefs.Require(this, dataManager, nameof(dataManager)))
+            return;
+
         dataManager.OnPowerDataUpdated          += HandlePowerDataUpdated;
         dataManager.OnBlackoutSimulationParsed  += HandleBlackoutSimulationParsed;
     }
 
     private void OnDisable()
     {
+        if (dataManager == null) return;
+
         dataManager.OnPowerDataUpdated          -= HandlePowerDataUpdated;
         dataManager.OnBlackoutSimulationParsed  -= HandleBlackoutSimulationParsed;
     }
@@ -81,13 +91,13 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private IEnumerator RunSimulation()
     {
-        foreach (DistrictType distirctType in _orderedDistricts)
+        foreach (DistrictType districtType in _orderedDistricts)
         {
-            OnBlackoutDistrictChanged?.Invoke(distirctType);
+            OnBlackoutDistrictChanged?.Invoke(districtType);
 
-            double consumption = _guConsumption.TryGetValue(distirctType, out double v) ? v : 0.0;
+            double consumption = _guConsumption.TryGetValue(districtType, out double v) ? v : 0.0;
             _waitingForFinish = true;
-            OnDistrictBlackedOut?.Invoke(distirctType, consumption);
+            OnDistrictBlackedOut?.Invoke(districtType, consumption);
 
             // BlackoutLogger가 NotifyDistrictFinished()를 호출할 때까지 대기
             yield return new WaitUntil(() => !_waitingForFinish);

@@ -20,8 +20,19 @@ public class BlackoutLogger : MonoBehaviour
 
     private Coroutine _logCoroutine;
 
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref simulationController);
+    }
+
     private void OnEnable()
     {
+        if (!SceneRefs.RequireAll(this,
+                (dataManager, nameof(dataManager)),
+                (simulationController, nameof(simulationController))))
+            return;
+
         dataManager.OnBlackoutSimulationParsed += HandleSimulationParsed;
         dataManager.OnBlackoutItemsParsed += HandleItemsParsed;
 
@@ -32,12 +43,18 @@ public class BlackoutLogger : MonoBehaviour
 
     private void OnDisable()
     {
-        dataManager.OnBlackoutSimulationParsed -= HandleSimulationParsed;
-        dataManager.OnBlackoutItemsParsed -= HandleItemsParsed;
+        if (dataManager != null)
+        {
+            dataManager.OnBlackoutSimulationParsed -= HandleSimulationParsed;
+            dataManager.OnBlackoutItemsParsed -= HandleItemsParsed;
+        }
 
-        simulationController.OnBlackoutSimulationToggled -= HandleToggled;
-        simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
-        simulationController.OnSimulationCompleted -= HandleSimulationCompleted;
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutSimulationToggled -= HandleToggled;
+            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
+            simulationController.OnSimulationCompleted -= HandleSimulationCompleted;
+        }
     }
 
     private void HandleSimulationParsed(List<DistrictType> districtsType, Dictionary<DistrictType, double> consumption)
