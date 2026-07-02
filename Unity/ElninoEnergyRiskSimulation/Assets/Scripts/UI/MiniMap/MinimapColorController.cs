@@ -43,33 +43,30 @@ public class MinimapColorController : MonoBehaviour
         if (minimapManager == null)
             minimapManager = GetComponent<MinimapManager>();
 
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
-
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref uiController);
+        SceneRefs.Resolve(ref simulationController);
     }
 
     private void OnEnable()
     {
-        if (dataManager != null && simulationController != null)
+        if (!SceneRefs.RequireAll(this,
+            (minimapManager, nameof(minimapManager)),
+            (dataManager, nameof(dataManager)),
+            (uiController, nameof(uiController)),
+            (simulationController, nameof(simulationController))
+        ))
         {
-            dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
-            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
-        }
-        else
-        {
-            Debug.LogWarning("[MinimapColorController] DataManager가 연결되지 않았습니다.");
+            return;
         }
 
-        if (uiController != null)
-            uiController.OnOniValueChanged += HandleOniSliderChanged;
+        dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
+        dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
 
-        if (simulationController != null)
-        {
-            simulationController.OnBlackoutDistrictChanged += HandleBlackoutDistrictChanged;
-            simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
-        }
+        uiController.OnOniValueChanged += HandleOniSliderChanged;
+
+        simulationController.OnBlackoutDistrictChanged += HandleBlackoutDistrictChanged;
+        simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
     }
 
     private void OnDisable()
