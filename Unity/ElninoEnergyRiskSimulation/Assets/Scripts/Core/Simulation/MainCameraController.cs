@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using CesiumForUnity;
-using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -60,11 +59,7 @@ public class MainCameraController : MonoBehaviour
             if (cameraAnchor != null && cesiumController != null && flyToController != null)
             {
                 // FlyTo 이동 시간 설정
-                flyToController.flyToDuration = 1f;
-
-                // 초기 위치를 종로구로 설정
-                MoveToDistrict(DistrictType.JONGNO);
-
+                flyToController.flyToDuration = FlyTime;
             }
             else
             {
@@ -77,18 +72,30 @@ public class MainCameraController : MonoBehaviour
     // 클릭시 해당 구로 카메라 이동
     private void OnEnable()
     {
-        minimapManager.OnDistrictSelected += MoveToClickedDistrict;
-        simulationController.OnBlackoutDistrictChanged += MoveToBlackoutDistrict;
-        simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+        if (minimapManager != null)
+            minimapManager.OnDistrictSelected += MoveToClickedDistrict;
+
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutDistrictChanged += MoveToBlackoutDistrict;
+            simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+        }
     }
 
     private void OnDisable()
     {
-        minimapManager.OnDistrictSelected -= MoveToClickedDistrict;
-        simulationController.OnBlackoutDistrictChanged -= MoveToBlackoutDistrict;
-        simulationController.OnBlackoutSimulationToggled -= HandleSimulationToggled;
+        if (minimapManager != null)
+            minimapManager.OnDistrictSelected -= MoveToClickedDistrict;
+
+        if (simulationController != null)
+        {
+            simulationController.OnBlackoutDistrictChanged -= MoveToBlackoutDistrict;
+            simulationController.OnBlackoutSimulationToggled -= HandleSimulationToggled;
+        }
     }
 
+    // 현재 구의 Bounding Box 안으로 위치를 제한
+    // 매 프레임 카메라 회전을 아래 방향으로 고정
     private void LateUpdate()
     {
         if (cameraAnchor == null) return;
@@ -120,11 +127,14 @@ public class MainCameraController : MonoBehaviour
 
         cesiumController.enableRotation = false;
     }
-
+    
+    // 시뮬레이션 ON/OFF 토글 이벤트 처리
     private void HandleSimulationToggled(bool isOn)
     {
         _isSimulationOn = isOn;
     }
+
+    // MinimapManager에서 구별 중심 좌표를 등록
     public void RegisterDistrictPosition(DistrictType districtType, double lon, double lat)
     {
         if (string.IsNullOrEmpty(DataConverter.GetDistrictName(districtType))) return;
@@ -154,6 +164,7 @@ public class MainCameraController : MonoBehaviour
         MoveToDistrict(districtType);
     }
 
+    // 구로 카메라 이동
     public void MoveToDistrict(DistrictType districtType)
     {
         if (cameraAnchor == null)
@@ -162,12 +173,14 @@ public class MainCameraController : MonoBehaviour
             return;
         }
 
+        // 이동할 구의 중심 좌표 확인
         if (!districtLonLatMap.TryGetValue(districtType, out double2 lonLat))
         {
             Debug.LogWarning("[MainCameraController] 이동 좌표를 찾을 수 없습니다: " + DataConverter.GetDistrictName(districtType));
             return;
         }
 
+        // 해당 구의 이동 범위 확인
         if (minimapManager.TryGetDistrictBounds(districtType, out currentBounds))
         {
             hasCurrentBounds = true;
@@ -177,8 +190,10 @@ public class MainCameraController : MonoBehaviour
             hasCurrentBounds = false;
         }
 
+
         CancelInvoke(nameof(EndFly));
 
+        // 부드럽게 이동
         if (flyToController != null)
         {
             isFlying = true;
@@ -201,6 +216,7 @@ public class MainCameraController : MonoBehaviour
         }
     }
 
+    // 카메라 이동 종료 후 isFlying 상태 false로 변경
     private void EndFly()
     {
         isFlying = false;
