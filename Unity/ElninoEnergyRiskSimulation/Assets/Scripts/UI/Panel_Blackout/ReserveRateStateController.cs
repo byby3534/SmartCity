@@ -234,9 +234,6 @@ public class ReserveRateStateController : MonoBehaviour
         float rate = Mathf.Max(0f, _displayReserveRate);
         int level = ReserveRateStagePalette.ToLevel(rate);
 
-        if (level < 4 && _simOn)
-            simulationController.RequestToggle(false);
-
         var snapshot = new ReserveRateSnapshot(
             rate,
             level,

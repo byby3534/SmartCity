@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 시뮬레이션 로그 버스. LogPanelUI가 구독하고, Bridge·BlackoutLogger 등이 발행한다.
+/// 시뮬레이션 로그 버스. LogPanelUI가 구독하고, LogEventBridge 등이 발행한다.
 /// </summary>
 public static class SimulationLog
 {

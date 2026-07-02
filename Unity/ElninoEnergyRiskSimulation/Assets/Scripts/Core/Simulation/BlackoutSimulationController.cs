@@ -3,6 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum DistrictBlackoutPhase
+{
+    BlackoutComplete,
+    RestoreStarted,
+    RestoreComplete,
+}
+
 public class BlackoutSimulationController : MonoBehaviour
 {
     [Header("데이터")]
@@ -11,6 +18,7 @@ public class BlackoutSimulationController : MonoBehaviour
     public event Action<DistrictType>           OnBlackoutDistrictChanged;
     public event Action<bool>                   OnBlackoutSimulationToggled;
     public event Action<DistrictType, double>   OnDistrictBlackedOut;
+    public event Action<DistrictType, DistrictBlackoutPhase> OnDistrictBlackoutPhase;
     public event Action                         OnSimulationCompleted;
     public event Action<DistrictType, DistrictType> OnActiveDistrictsChanged; // current, next
 
@@ -60,28 +68,30 @@ public class BlackoutSimulationController : MonoBehaviour
         if (!SceneRefs.Require(this, dataManager, nameof(dataManager)))
             return;
 
-        dataManager.OnPowerDataUpdated          += HandlePowerDataUpdated;
-        dataManager.OnBlackoutSimulationParsed  += HandleBlackoutSimulationParsed;
+        dataManager.OnBlackoutSimulationParsed += HandleBlackoutSimulationParsed;
     }
 
     private void OnDisable()
     {
         if (dataManager == null) return;
 
-        dataManager.OnPowerDataUpdated          -= HandlePowerDataUpdated;
-        dataManager.OnBlackoutSimulationParsed  -= HandleBlackoutSimulationParsed;
+        dataManager.OnBlackoutSimulationParsed -= HandleBlackoutSimulationParsed;
     }
 
-    // BlackoutLogger가 한 구의 로그를 모두 출력하면 호출
-    public void NotifyDistrictFinished()
+    public void NotifyDistrictBlackoutComplete(DistrictType district)
     {
+        OnDistrictBlackoutPhase?.Invoke(district, DistrictBlackoutPhase.BlackoutComplete);
+    }
+
+    public void NotifyDistrictRestoreStarted(DistrictType district)
+    {
+        OnDistrictBlackoutPhase?.Invoke(district, DistrictBlackoutPhase.RestoreStarted);
+    }
+
+    public void NotifyDistrictRestoreComplete(DistrictType district)
+    {
+        OnDistrictBlackoutPhase?.Invoke(district, DistrictBlackoutPhase.RestoreComplete);
         _waitingForFinish = false;
-    }
-
-    private void HandlePowerDataUpdated(PowerGridData data)
-    {
-        if (data.riskLevel < 4 && _isOn)
-            RequestToggle(false);
     }
 
     private void HandleBlackoutSimulationParsed(List<DistrictType> orderedGuNames, Dictionary<DistrictType, double> guConsumption)
