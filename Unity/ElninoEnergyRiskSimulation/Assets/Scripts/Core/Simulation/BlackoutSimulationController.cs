@@ -9,9 +9,10 @@ public class BlackoutSimulationController : MonoBehaviour
     [SerializeField] private DataManager dataManager;
 
     public event Action<DistrictType>           OnBlackoutDistrictChanged;
-    public event Action<bool>             OnBlackoutSimulationToggled;
+    public event Action<bool>                   OnBlackoutSimulationToggled;
     public event Action<DistrictType, double>   OnDistrictBlackedOut;
-    public event Action                   OnSimulationCompleted;
+    public event Action                         OnSimulationCompleted;
+    public event Action<DistrictType, DistrictType> OnActiveDistrictsChanged; // current, next
 
     private List<DistrictType>               _orderedDistricts = new();
     private Dictionary<DistrictType, double> _guConsumption = new();
@@ -91,15 +92,18 @@ public class BlackoutSimulationController : MonoBehaviour
 
     private IEnumerator RunSimulation()
     {
-        foreach (DistrictType districtType in _orderedDistricts)
+        for (int i = 0; i < _orderedDistricts.Count; i++)
         {
-            OnBlackoutDistrictChanged?.Invoke(districtType);
+            DistrictType current = _orderedDistricts[i];
+            DistrictType next    = (i + 1 < _orderedDistricts.Count) ? _orderedDistricts[i + 1] : DistrictType.None;
 
-            double consumption = _guConsumption.TryGetValue(districtType, out double v) ? v : 0.0;
+            OnActiveDistrictsChanged?.Invoke(current, next);
+            OnBlackoutDistrictChanged?.Invoke(current);
+
+            double consumption = _guConsumption.TryGetValue(current, out double v) ? v : 0.0;
             _waitingForFinish = true;
-            OnDistrictBlackedOut?.Invoke(districtType, consumption);
+            OnDistrictBlackedOut?.Invoke(current, consumption);
 
-            // BlackoutLogger가 NotifyDistrictFinished()를 호출할 때까지 대기
             yield return new WaitUntil(() => !_waitingForFinish);
         }
 

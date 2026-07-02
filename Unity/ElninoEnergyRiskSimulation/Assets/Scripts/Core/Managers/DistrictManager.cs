@@ -198,6 +198,11 @@ public class DistrictManager : MonoBehaviour
         buildingManager.MarkBufferDirty();
         buildingManager.FlushBufferToGPU();
 
+        // reductionValue가 실제 값으로 갱신되었으므로, 정전 연출용 정렬 인덱스도 다시 계산해야
+        // "필요도가 높은 건물부터" 정전이 발생한다 (Start() 시점엔 reductionValue가 전부 0이라
+        // 그때 만든 정렬은 의미가 없음).
+        buildingManager.RebuildSortedIndices();
+
         Debug.Log($"[DistrictManager] reductionValue 갱신 완료 ({updatedCount}개 건물, 범위 {minScore:F3}~{maxScore:F3})");
     }
 

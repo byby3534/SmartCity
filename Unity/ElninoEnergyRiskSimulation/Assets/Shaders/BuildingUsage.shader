@@ -3,9 +3,10 @@ Shader "SmartCity/BuildingUsage"
     Properties
     {
         [Header(Heatmap Colors)]
-        _SafeColor   ("Safe Color (Low)",     Color) = (0.0, 0.5, 1.0, 1.0)
-        _WarningColor("Warning Color (Mid)",  Color) = (1.0, 0.8, 0.0, 1.0)
-        _DangerColor ("Danger Color (High)",  Color) = (1.0, 0.1, 0.1, 1.0)
+        _SafeColor   ("Safe Color (Low)",   Color) = (0.0, 0.5, 1.0, 1.0)
+        _DangerColor ("Danger Color (High)", Color) = (1.0, 0.1, 0.1, 1.0)
+        _ColorMin    ("Color Range Min",    Range(0, 1)) = 0.0
+        _ColorMax    ("Color Range Max",    Range(0, 1)) = 1.0
 
         [Header(Blackout)]
         _BlackoutColor("Blackout Color",      Color) = (0.02, 0.02, 0.02, 1.0)
@@ -49,10 +50,11 @@ Shader "SmartCity/BuildingUsage"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _SafeColor;
-                float4 _WarningColor;
                 float4 _DangerColor;
                 float4 _BlackoutColor;
                 float  _AmbientStrength;
+                float  _ColorMin;
+                float  _ColorMax;
             CBUFFER_END
 
             struct Attributes
@@ -82,20 +84,13 @@ Shader "SmartCity/BuildingUsage"
                 return output;
             }
 
-            // 수요감축 필요도(0~1)를 3단 보간 히트맵 색상으로 변환
+            // 수요감축 필요도(0~1)를 Safe → Danger 보간
+            // _ColorMin~_ColorMax 범위를 0~1로 리매핑해 색 분포를 펼침
             float3 EvaluateHeatmap(float t)
             {
-                t = saturate(t);
-
-                // 0.0 → Safe(파랑)  |  0.5 → Warning(노랑)  |  1.0 → Danger(빨강)
-                if (t < 0.5)
-                {
-                    return lerp(_SafeColor.rgb, _WarningColor.rgb, t * 2.0);
-                }
-                else
-                {
-                    return lerp(_WarningColor.rgb, _DangerColor.rgb, (t - 0.5) * 2.0);
-                }
+                float range = max(_ColorMax - _ColorMin, 1e-5);
+                t = saturate((t - _ColorMin) / range);
+                return lerp(_SafeColor.rgb, _DangerColor.rgb, t);
             }
 
             half4 frag(Varyings input) : SV_Target

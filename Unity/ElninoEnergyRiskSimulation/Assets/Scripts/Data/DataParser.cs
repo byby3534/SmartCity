@@ -80,7 +80,7 @@ public class DataParser
                                         data.districtType = DataConverter.GetDistrictType(districtName);
                                     }
 
-                                    string buildingTypeStr = props["A9"]?.ToString();
+                                    string buildingTypeStr = props["building_type"]?.ToString();
                                     data.buildingType = DataConverter.GetBuildingType(buildingTypeStr);
 
                                     string sigunguCodeStr = props["A23"]?.ToString();

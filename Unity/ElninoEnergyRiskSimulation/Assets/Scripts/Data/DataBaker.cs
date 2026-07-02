@@ -29,18 +29,20 @@ public class DataBaker : MonoBehaviour
         await Task.Run(() =>
         {
             var groupedByDistrict = allBuildings.GroupBy(b => b.districtId);
-            string saveDirectory = "Assets/Resources/Districts";
+            string baseDirectory = "Assets/Resources/Districts";
 
-            if (!Directory.Exists(saveDirectory))
-                Directory.CreateDirectory(saveDirectory);
+            if (!Directory.Exists(baseDirectory))
+                Directory.CreateDirectory(baseDirectory);
 
-            using (BinaryWriter polyWriter = new BinaryWriter(File.Open($"{saveDirectory}/PolygonData.bytes", FileMode.Create)))
+            using (BinaryWriter polyWriter = new BinaryWriter(File.Open($"{baseDirectory}/PolygonData.bytes", FileMode.Create)))
             {
                 int globalPolygonIndex = 0;
 
                 foreach (var group in groupedByDistrict)
                 {
-                    string filePath = $"{saveDirectory}/District_{group.Key}.bytes";
+                    string districtDir = $"{baseDirectory}/{group.Key}";
+                    Directory.CreateDirectory(districtDir);
+                    string filePath = $"{districtDir}/District.bytes";
                     using (BinaryWriter writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
                     {
                         foreach (var b in group)
