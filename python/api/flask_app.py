@@ -498,6 +498,29 @@ def weather_current():
             "message": str(e)
         }), 500
 
+@app.get("/power/current")
+def power_current():
+    """
+    실시간 공급예비율 데이터.
+
+    GET /power/current
+    """
+
+    try:
+        from python.loader.current_suppreserverate_loader import current_suppreserverate_loader
+
+        power = current_suppreserverate_loader()
+
+        return jsonify({
+            "status": "ok",
+            "power": power
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 if __name__ == "__main__":
     port = int(os.getenv("FLASK_PORT", 5001))
