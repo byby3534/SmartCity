@@ -312,8 +312,9 @@ Unity/ElninoEnergyRiskSimulation/Assets/StreamingAssets
 Unity/ElninoEnergyRiskSimulation/Assets/Scenes/Test
 Unity/ElninoEnergyRiskSimulation/Assets/Scripts/Test
 /Unity/ElninoEnergyRiskSimulation/Assets/Resources/Districts
-/Unity/ElninoEnergyRiskSimulation/Assets/Plugins
 
 # Unity crash logs
 *.blob
 mono_crash.*
+
+/SeoulBuildingProcessor
