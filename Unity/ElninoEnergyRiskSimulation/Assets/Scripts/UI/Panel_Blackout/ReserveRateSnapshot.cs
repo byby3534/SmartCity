@@ -9,10 +9,26 @@ public readonly struct ReserveRateSnapshot
         SimCompletedHold,
     }
 
-    public float ReserveRate { get; init; }
-    public int Level { get; init; }
-    public float NeedleAngle { get; init; }
-    public bool AnimateNeedle { get; init; }
-    public bool IsSimulating { get; init; }
-    public UiPhase Phase { get; init; }
+    public float ReserveRate { get; }
+    public int Level { get; }
+    public float NeedleAngle { get; }
+    public bool AnimateNeedle { get; }
+    public bool IsSimulating { get; }
+    public UiPhase Phase { get; }
+
+    public ReserveRateSnapshot(
+        float reserveRate,
+        int level,
+        float needleAngle,
+        bool animateNeedle,
+        bool isSimulating,
+        UiPhase phase)
+    {
+        ReserveRate = reserveRate;
+        Level = level;
+        NeedleAngle = needleAngle;
+        AnimateNeedle = animateNeedle;
+        IsSimulating = isSimulating;
+        Phase = phase;
+    }
 }

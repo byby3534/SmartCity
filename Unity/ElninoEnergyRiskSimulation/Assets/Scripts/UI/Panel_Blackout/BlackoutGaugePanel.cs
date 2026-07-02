@@ -39,11 +39,13 @@ public class BlackoutGaugePanel : MonoBehaviour
 
     private void OnEnable()
     {
-        if (stateController != null)
-        {
-            stateController.OnStateChanged += HandleStateChanged;
-            HandleStateChanged(stateController.Current);
-        }
+        SceneRefs.Resolve(ref stateController);
+
+        if (!SceneRefs.Require(this, stateController, nameof(stateController)))
+            return;
+
+        stateController.OnStateChanged += HandleStateChanged;
+        HandleStateChanged(stateController.Current);
     }
 
     private void OnDisable()

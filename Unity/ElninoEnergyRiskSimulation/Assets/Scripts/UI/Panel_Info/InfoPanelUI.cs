@@ -42,10 +42,13 @@ public class InfoPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
+        SceneRefs.Resolve(ref reserveRateState);
+
         if (!SceneRefs.RequireAll(this,
                 (dataManager, nameof(dataManager)),
                 (uiController, nameof(uiController)),
-                (minimapManager, nameof(minimapManager))))
+                (minimapManager, nameof(minimapManager)),
+                (reserveRateState, nameof(reserveRateState))))
             return;
 
         dataManager.OnCurrentTempDataUpdated += HandleCurrentTempUpdated;
@@ -57,11 +60,8 @@ public class InfoPanelUI : MonoBehaviour
 
         minimapManager.OnDistrictSelected += HandleDistrictSelected;
 
-        if (reserveRateState != null)
-        {
-            reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
-            HandleReserveRateStateChanged(reserveRateState.Current);
-        }
+        reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
+        HandleReserveRateStateChanged(reserveRateState.Current);
     }
 
     private void OnDisable()

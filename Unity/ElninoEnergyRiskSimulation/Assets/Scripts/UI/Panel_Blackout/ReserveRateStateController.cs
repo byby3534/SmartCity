@@ -6,6 +6,7 @@ using UnityEngine;
 
 /// <summary>
 /// 예비율 단일 상태 소스. 데이터·시뮬 이벤트를 한곳에서 처리하고 스냅샷을 발행한다.
+/// /predict(OnPowerDataUpdated)로 즉시 반영, oni_range는 슬라이더 보간용 보충.
 /// HUD는 항상 ReserveRate 기준. 게이지 니들·강조·패널 텍스트는 구독 측에서 애니메이션 규칙을 적용한다.
 /// </summary>
 public class ReserveRateStateController : MonoBehaviour
@@ -47,22 +48,21 @@ public class ReserveRateStateController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
-            dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
-            dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
-        }
+        if (!SceneRefs.RequireAll(this,
+                (dataManager, nameof(dataManager)),
+                (uiController, nameof(uiController)),
+                (simulationController, nameof(simulationController))))
+            return;
 
-        if (uiController != null)
-            uiController.OnOniValueChanged += HandleOniValueChanged;
+        dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
+        dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
+        dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
 
-        if (simulationController != null)
-        {
-            simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
-            simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
-            simulationController.OnSimulationCompleted += HandleSimCompleted;
-        }
+        uiController.OnOniValueChanged += HandleOniValueChanged;
+
+        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
+        simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
+        simulationController.OnSimulationCompleted += HandleSimCompleted;
 
         Publish(animateNeedle: false);
     }
@@ -143,7 +143,7 @@ public class ReserveRateStateController : MonoBehaviour
         if (_simOn)
             return;
 
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
+        float oni = uiController.GetCurrentOni();
         ApplyOniReserveRate(oni, animateNeedle: !_hasReceivedData);
     }
 
@@ -234,20 +234,18 @@ public class ReserveRateStateController : MonoBehaviour
         float rate = Mathf.Max(0f, _displayReserveRate);
         int level = ReserveRateStagePalette.ToLevel(rate);
 
-        if (level < 4 && _simOn && simulationController != null)
+        if (level < 4 && _simOn)
             simulationController.RequestToggle(false);
 
-        var snapshot = new ReserveRateSnapshot
-        {
-            ReserveRate = rate,
-            Level = level,
-            NeedleAngle = ReserveRateGaugeMath.ToAngle(rate),
-            AnimateNeedle = animateNeedle,
-            IsSimulating = _simOn,
-            Phase = phase ?? (_naturalCompleteInProgress
+        var snapshot = new ReserveRateSnapshot(
+            rate,
+            level,
+            ReserveRateGaugeMath.ToAngle(rate),
+            animateNeedle,
+            _simOn,
+            phase ?? (_naturalCompleteInProgress
                 ? ReserveRateSnapshot.UiPhase.SimCompletedHold
-                : ReserveRateSnapshot.UiPhase.Normal),
-        };
+                : ReserveRateSnapshot.UiPhase.Normal));
 
         Current = snapshot;
         OnStateChanged?.Invoke(snapshot);

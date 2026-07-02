@@ -39,20 +39,25 @@ public class RollingBlackoutStartButton : MonoBehaviour
 
     private void OnEnable()
     {
-        if (uiController != null)
-        {
-            uiController.OnOniPanelVisibilityChanged += HandleOniPanelVisibilityChanged;
-            HandleOniPanelVisibilityChanged(uiController.IsOniPanelVisible);
-        }
+        SceneRefs.Resolve(ref uiController);
+        SceneRefs.Resolve(ref simulationController);
+        SceneRefs.Resolve(ref reserveRateState);
 
-        if (simulationController != null)
-            simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
+        if (!SceneRefs.RequireAll(this,
+                (uiController, nameof(uiController)),
+                (simulationController, nameof(simulationController)),
+                (reserveRateState, nameof(reserveRateState))))
+            return;
 
-        if (reserveRateState != null)
-        {
-            reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
-            HandleReserveRateStateChanged(reserveRateState.Current);
-        }
+        uiController.OnOniPanelVisibilityChanged += HandleOniPanelVisibilityChanged;
+        HandleOniPanelVisibilityChanged(uiController.IsOniPanelVisible);
+
+        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
+
+        reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
+        HandleReserveRateStateChanged(reserveRateState.Current);
+        _simOn = reserveRateState.Current.IsSimulating;
+        RefreshVisual();
     }
 
     private void OnDisable()
@@ -69,18 +74,14 @@ public class RollingBlackoutStartButton : MonoBehaviour
 
     private void ResolveReferences()
     {
-        if (button == null)
-            button = GetComponent<Button>();
+        SceneRefs.EnsureOn(ref button, gameObject);
+        SceneRefs.EnsureOn(ref _panelCanvasGroup, gameObject);
 
         if (buttonBackground == null)
             buttonBackground = GetComponent<Graphic>();
 
         if (buttonLabel == null)
             buttonLabel = GetComponentInChildren<TMP_Text>(true);
-
-        _panelCanvasGroup = GetComponent<CanvasGroup>();
-        if (_panelCanvasGroup == null)
-            _panelCanvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
     private void HandleOniPanelVisibilityChanged(bool visible)
@@ -93,7 +94,6 @@ public class RollingBlackoutStartButton : MonoBehaviour
     {
         _currentLevel = snapshot.Level;
         _uiPhase = snapshot.Phase;
-        _simOn = snapshot.IsSimulating;
         RefreshVisual();
     }
 
@@ -105,7 +105,7 @@ public class RollingBlackoutStartButton : MonoBehaviour
 
     private void HandleClick()
     {
-        if (simulationController == null || _uiPhase == ReserveRateSnapshot.UiPhase.SimCompletedHold)
+        if (_uiPhase == ReserveRateSnapshot.UiPhase.SimCompletedHold)
             return;
 
         simulationController.RequestToggle(!_simOn);
@@ -129,8 +129,8 @@ public class RollingBlackoutStartButton : MonoBehaviour
             return;
 
         bool simCompleted = _uiPhase == ReserveRateSnapshot.UiPhase.SimCompletedHold;
-        bool canSimulate = ReserveRateStagePalette.CanSimulate(_currentLevel);
-        bool interactable = canSimulate && !simCompleted;
+        bool canStart = ReserveRateStagePalette.CanSimulate(_currentLevel);
+        bool interactable = !simCompleted && (_simOn || canStart);
 
         if (button != null)
             button.interactable = interactable;
