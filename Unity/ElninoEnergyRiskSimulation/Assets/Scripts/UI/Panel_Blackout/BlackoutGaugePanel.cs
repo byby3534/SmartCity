@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -60,6 +61,7 @@ public class BlackoutGaugePanel : MonoBehaviour
         {
             dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
+            dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
         }
 
         if (uiController != null)
@@ -107,6 +109,7 @@ public class BlackoutGaugePanel : MonoBehaviour
         {
             dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
             dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
+            dataManager.OnCurrentPowerUpdated -= HandleCurrentPowerUpdated;
         }
         if (uiController != null)
             uiController.OnOniValueChanged -= HandleOniSliderChanged;
@@ -128,6 +131,24 @@ public class BlackoutGaugePanel : MonoBehaviour
         _lastReserveRate = data.reserveRate;
         _seoulTotal = data.seoulTotalConsumption;
         ApplyReserveRate(data.reserveRate, instant: true);
+    }
+
+    private void HandleCurrentPowerUpdated(JObject power)
+    {
+        if (_hasReceivedData || _simOn || power == null)
+            return;
+
+        if (power["suppReserveRate"] == null)
+            return;
+
+        if (float.TryParse(power["suppReserveRate"].ToString(), out float reserveRate))
+        {
+            _hasReceivedData = true;
+            _lastReserveRate = reserveRate;
+            _seoulTotal = 0f;
+
+            ApplyReserveRate(reserveRate, instant: true);
+        }
     }
 
     private void HandleOniRangeDataUpdated(List<OniRangeData> data)

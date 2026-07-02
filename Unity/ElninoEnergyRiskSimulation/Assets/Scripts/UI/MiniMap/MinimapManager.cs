@@ -34,6 +34,16 @@ public class MinimapManager : MonoBehaviour
     [SerializeField] private RectTransform tooltipRoot;
     [SerializeField] private TextMeshProUGUI tooltipText;
 
+
+    // 클릭 구 이름
+    [Header("SelectedGuName")]
+    [SerializeField] private TMP_Text SelectedGuName;
+
+    // 초기 선택 구
+    [Header("initialDistrict")]
+    [SerializeField] private DistrictType initialDistrict = DistrictType.JONGNO;
+
+
     // 구 이름, 구 폴리곤 딕셔너리
     private Dictionary<DistrictType, List<MinimapPolygon>> districtPolygonMap =
         new Dictionary<DistrictType, List<MinimapPolygon>>();
@@ -42,9 +52,8 @@ public class MinimapManager : MonoBehaviour
     private Dictionary<DistrictType, List<MinimapOutline>> districtOutlineMap =
         new Dictionary<DistrictType, List<MinimapOutline>>();
 
-    // 구별 현재 cmap 색 저장
-    private Dictionary<DistrictType, Color> districtCurrentColor =
-        new Dictionary<DistrictType, Color>();
+    // 구 이름, 최대최소 좌표 딕셔너리
+    private Dictionary<DistrictType, Vector4> districtPolygonLonLatMap = new Dictionary<DistrictType, Vector4>();
 
     // 현재 선택된 구 이름
     private DistrictType selectedDistrictType;
@@ -135,13 +144,10 @@ public class MinimapManager : MonoBehaviour
             {
                 ScanPolygonBounds((JArray)geometry["coordinates"]);
             }
-            else if (type == "MultiPolygon")
+             else
             {
-                // 멀티 폴리곤일 경우 각각의 폴리곤으로 쪼개서 계산
-                foreach (JArray polygon in geometry["coordinates"])
-                {
-                    ScanPolygonBounds(polygon);
-                }
+                Debug.LogWarning("[MinimapManager] 알 수 없는 지오메트리 타입: " + type);
+                return;
             }
         }
     }
@@ -200,24 +206,72 @@ public class MinimapManager : MonoBehaviour
             JToken geometry = feature["geometry"];
             string type = geometry["type"]?.ToString();
 
+            double minLon = double.MaxValue;
+            double maxLon = double.MinValue;
+            double minLat = double.MaxValue;
+            double maxLat = double.MinValue;
+
             if (type == "Polygon")
             {
+                ScanDistrictBounds(
+                    (JArray)geometry["coordinates"],
+                    ref minLon,
+                    ref maxLon,
+                    ref minLat,
+                    ref maxLat
+                );
                 CreatePolygonUI(districtType, (JArray)geometry["coordinates"]);
             }
-            else if (type == "MultiPolygon")
+            else
             {
-                foreach (JArray polygon in geometry["coordinates"])
-                {
-                    CreatePolygonUI(districtType, polygon);
-                }
+                Debug.LogWarning("[MinimapManager] 알 수 없는 지오메트리 타입: " + type);
+                return;
             }
+
+            districtPolygonLonLatMap[districtType] =
+            new Vector4(
+                (float)minLon,
+                (float)maxLon,
+                (float)minLat,
+                (float)maxLat
+                );
         }
 
         // 초기 카메라 좌표 설정
         if (mainCameraController != null)
         {
-            mainCameraController.MoveToDistrict(DistrictType.JONGNO);
+            mainCameraController.MoveToDistrict(initialDistrict);
         }
+    }
+    
+    // 구 폴리곤의 최대/최소 좌표 계산
+    private void ScanDistrictBounds(
+    JArray polygon,
+    ref double minLon,
+    ref double maxLon,
+    ref double minLat,
+    ref double maxLat)
+    {
+        JArray outerRing = (JArray)polygon[0];
+
+        foreach (JArray coord in outerRing)
+        {
+            double lon = coord[0].Value<double>();
+            double lat = coord[1].Value<double>();
+
+            minLon = Math.Min(minLon, lon);
+            maxLon = Math.Max(maxLon, lon);
+            minLat = Math.Min(minLat, lat);
+            maxLat = Math.Max(maxLat, lat);
+        }
+    }
+
+    // MainCameraController에서 가져오기 위한 함수
+    public bool TryGetDistrictBounds(
+        DistrictType districtType,
+        out Vector4 bounds)
+    {
+        return districtPolygonLonLatMap.TryGetValue(districtType, out bounds);
     }
 
     // 구 UI 범위에 맞게 구 그리기
@@ -415,6 +469,8 @@ public class MinimapManager : MonoBehaviour
 
         // 구 선택 이벤트 발생
         OnDistrictSelected?.Invoke(polygon.districtType);
+
+        SelectedGuName.text = DataConverter.GetDistrictName(polygon.districtType);
     }
 
     // 구 색상 설정

@@ -3022,6 +3022,10 @@ PrefabInstance:
       propertyPath: districtRoot
       value: 
       objectReference: {fileID: 415192930}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: SelectedGuName
+      value: 
+      objectReference: {fileID: 407996373}
     - target: {fileID: 6712415921854460043, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
       propertyPath: buildingManager
       value: 
@@ -11408,7 +11412,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SmartCity.Scripts::MainCameraController
   mainCamera: {fileID: 1394554679}
-  cilkedGuName: {fileID: 407996373}
   simulationController: {fileID: 1131763331}
   minimapManager: {fileID: 1966207135}
 --- !u!1 &1395353800
