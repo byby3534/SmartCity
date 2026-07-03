@@ -321,5 +321,3 @@ Unity/ElninoEnergyRiskSimulation/Assets/Scripts/Test
 # Unity crash logs
 *.blob
 mono_crash.*
-
-/SeoulBuildingProcessor
