@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
@@ -120,8 +119,12 @@ public class MinimapManager : MonoBehaviour
             return;
         }
 
-        
-        LoadGeoJson();
+        StartCoroutine(InitializeMinimap());
+    }
+
+    private IEnumerator InitializeMinimap()
+    {
+        yield return LoadGeoJson();
         CreateDistricts();
 
         // cmap/blackout 담당 Controller에게 미니맵 생성 완료 알림
@@ -219,21 +222,19 @@ public class MinimapManager : MonoBehaviour
         cg.interactable = false;
     }
 
-    // geojson 로드
-    private void LoadGeoJson()
+    // geojson 로드 (WebGL 포함 전 플랫폼: UnityWebRequest 기반)
+    private IEnumerator LoadGeoJson()
     {
-        // 경로 설정
-        string path = Path.Combine(Application.streamingAssetsPath, fileName);
+        string json = null;
+        yield return StreamingAssetsLoader.LoadText(fileName, text => json = text);
 
-        // 파일 존재 여부
-        if (!File.Exists(path))
+        if (string.IsNullOrEmpty(json))
         {
-            Debug.LogError("[MinimapManager] GeoJSON 파일을 찾을 수 없습니다: " + path);
-            return;
+            Debug.LogError("[MinimapManager] GeoJSON 로드 실패: " + fileName);
+            yield break;
         }
 
         // Json 파싱
-        string json = File.ReadAllText(path);
         JObject geoJson = JObject.Parse(json);
         features = (JArray)geoJson["features"];
 
@@ -251,7 +252,7 @@ public class MinimapManager : MonoBehaviour
              else
             {
                 Debug.LogWarning("[MinimapManager] 알 수 없는 지오메트리 타입: " + type);
-                return;
+                yield break;
             }
         }
     }

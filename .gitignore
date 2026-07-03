@@ -316,6 +316,7 @@ Unity/ElninoEnergyRiskSimulation/Assets/Scripts/Test
 # WebGL build output
 /www/*
 !www/.gitkeep
+/www1/*
 
 # Unity crash logs
 *.blob

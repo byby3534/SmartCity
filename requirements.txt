@@ -15,7 +15,7 @@ contextily
 scikit-learn
 xgboost
 
-# API
+# API / deployment (Flask + gunicorn + nginx local_stack.sh)
 flask
 python-dotenv
 gunicorn

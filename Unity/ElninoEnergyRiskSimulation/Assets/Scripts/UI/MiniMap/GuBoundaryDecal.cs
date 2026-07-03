@@ -1,5 +1,5 @@
+using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using Newtonsoft.Json.Linq;
@@ -71,6 +71,7 @@ public class GuBoundaryDecal : MonoBehaviour
     private void HandleSimulationToggled(bool isOn)
     {
         UpdateDistrictSelectionSubscription();
+        RebuildTexture();
     }
 
     private void UpdateDistrictSelectionSubscription()
@@ -103,7 +104,7 @@ public class GuBoundaryDecal : MonoBehaviour
 
     private void Start()
     {
-        LoadAndSpawn();
+        StartCoroutine(LoadAndSpawn());
     }
 
     private void HandleDistrictSelected(DistrictType districtType)
@@ -117,24 +118,26 @@ public class GuBoundaryDecal : MonoBehaviour
         RebuildTexture();
     }
 
-    private void LoadAndSpawn()
+    private IEnumerator LoadAndSpawn()
     {
         if (decalMaterial == null)
         {
             Debug.LogError("[GuBoundaryDecal] decalMaterial이 할당되지 않았습니다.");
-            return;
+            yield break;
         }
 
-        string path = Path.Combine(Application.streamingAssetsPath, fileName);
-        if (!File.Exists(path))
+        string json = null;
+        yield return StreamingAssetsLoader.LoadText(fileName, text => json = text);
+
+        if (string.IsNullOrEmpty(json))
         {
-            Debug.LogError("[GuBoundaryDecal] GeoJSON 없음: " + path);
-            return;
+            Debug.LogError("[GuBoundaryDecal] GeoJSON 로드 실패: " + fileName);
+            yield break;
         }
 
-        JObject root = JObject.Parse(File.ReadAllText(path));
+        JObject root = JObject.Parse(json);
         JArray features = (JArray)root["features"];
-        if (features == null || features.Count == 0) return;
+        if (features == null || features.Count == 0) yield break;
 
         _districts.Clear();
         _allRings.Clear();
@@ -166,7 +169,7 @@ public class GuBoundaryDecal : MonoBehaviour
                 _districts.Add(district);
         }
 
-        if (_allRings.Count == 0) return;
+        if (_allRings.Count == 0) yield break;
 
         double lonRange = _maxLon - _minLon;
         double latRange = _maxLat - _minLat;
@@ -243,7 +246,7 @@ public class GuBoundaryDecal : MonoBehaviour
         int res = _texture.width;
         var pixels = new Color[res * res];
 
-        if (!string.IsNullOrEmpty(_selectedDistrict))
+        if (ShouldShowSelectionFill())
         {
             foreach (DistrictData d in _districts)
             {
@@ -261,6 +264,18 @@ public class GuBoundaryDecal : MonoBehaviour
 
         _texture.SetPixels(pixels);
         _texture.Apply(false);
+    }
+
+    private bool ShouldShowSelectionFill()
+    {
+        if (string.IsNullOrEmpty(_selectedDistrict))
+            return false;
+
+        // 시뮬레이션 중에는 구 선택 회색 채우기만 숨김 — 경계선은 유지
+        if (simulationController != null && simulationController.IsSimulating)
+            return false;
+
+        return true;
     }
 
     private List<Vector2> RingToPoints(JArray ring, int res)
