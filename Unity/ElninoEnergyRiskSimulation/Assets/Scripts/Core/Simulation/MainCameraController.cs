@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CesiumForUnity;
 using Unity.Mathematics;
@@ -39,6 +40,8 @@ public class MainCameraController : MonoBehaviour
     // 좌표는 MinimapManager에서 가져옴
     private Dictionary<DistrictType, double2> districtLonLatMap =
         new Dictionary<DistrictType, double2>();
+
+    public event Action OnEndFlyEnded;
 
     private void Awake()
     {
@@ -226,5 +229,6 @@ public class MainCameraController : MonoBehaviour
     private void EndFly()
     {
         isFlying = false;
+        OnEndFlyEnded?.Invoke();
     }
 }
