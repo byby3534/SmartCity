@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 POWER_API_KEY = os.getenv("POWER_API_KEY")
-
-POWER_URL = "https://openapi.kpx.or.kr/openapi/sukub5mToday/getSukub5mToday"
+POWER_URL = "https://openapi.kpx.or.kr/openapi/sukub5mMaxDatetime/getSukub5mMaxDatetime"
 
 
 def current_suppreserverate_loader():

@@ -133,26 +133,31 @@ public class MinimapManager : MonoBehaviour
         UpdateSelectedDistrictDisplay();
     }
 
+    // 블랙아웃 시뮬레이션 토글 이벤트 처리
     private void HandleSimulationToggled(bool isOn)
     {
         _isSimulationOn = isOn;
-        _userSelectedDuringSim = false;
+        _userSelectedDuringSim = false; // 사용자 선택 초기화
 
         if (isOn)
         {
+            // 시뮬레이션 시작 시 선택 구 초기화 -> 아웃라인 흰색으로
             ResetSelectedDistrictOutline();
         }
         else
         {
+            // 시뮬레이션 종료 시, 시뮬레이션 중인 구 그대로 표시
             if (_simDistrict != DistrictType.None)
             {
                 selectedDistrictType = _simDistrict;
             }
 
+            // UI 갱신
             UpdateSelectedDistrictDisplay();
         }
     }
 
+    // 시뮬레이션이 다음 구로 이동할때마다 호출
     private void HandleBlackoutDistrictChanged(DistrictType districtType)
     {
         _simDistrict = districtType;
@@ -161,8 +166,10 @@ public class MinimapManager : MonoBehaviour
             UpdateSelectedDistrictDisplay();
     }
 
+    // 현재 화면에 어떤 구 표시할지 결정
     private void UpdateSelectedDistrictDisplay()
     {
+        // 시뮬 중이고 사용자 선택 없음
         bool showSimDistrict = _isSimulationOn && !_userSelectedDuringSim;
         DistrictType displayDistrict = showSimDistrict ? _simDistrict : selectedDistrictType;
 
@@ -192,21 +199,6 @@ public class MinimapManager : MonoBehaviour
 
             outline.lineWidth = outlineWidth;
             outline.SetOutlineColor(nonSelectedOutlineColor);
-        }
-    }
-
-    private void RestoreSelectedDistrictOutline()
-    {
-        if (selectedDistrictType == DistrictType.None) return;
-
-        if (!districtOutlineMap.TryGetValue(selectedDistrictType, out List<MinimapOutline> selectedOutlines))
-            return;
-
-        foreach (MinimapOutline outline in selectedOutlines)
-        {
-            if (outline == null) continue;
-
-            outline.SetOutlineColor(selectedOutlineColor);
         }
     }
 
@@ -551,17 +543,7 @@ public class MinimapManager : MonoBehaviour
 
         // 현재 구 상태 변경 전 이전 선택 구 상태 변경
         // : 이전 선택된 구 아웃라인 -> 원래 색으로
-        if (districtOutlineMap.TryGetValue(selectedDistrictType, out List<MinimapOutline> previousOutlines))
-        {
-            foreach (MinimapOutline outline in previousOutlines)
-            {
-                if (outline != null)
-                {
-                    outline.lineWidth = outlineWidth;
-                    outline.SetOutlineColor(nonSelectedOutlineColor);
-                }
-            }
-        }
+        ResetSelectedDistrictOutline();
 
         // 현재 클릭 구로 선택 구 이름 변경
         selectedDistrictType = polygon.districtType;
@@ -586,8 +568,8 @@ public class MinimapManager : MonoBehaviour
 
         Debug.Log("[MinimapManager] 클릭한 구: " + DataConverter.GetDistrictName(polygon.districtType));
 
-        if (_isSimulationOn)
-            _userSelectedDuringSim = true;
+        // if (_isSimulationOn)
+        //     _userSelectedDuringSim = true;
 
         OnDistrictSelected?.Invoke(polygon.districtType);
         UpdateSelectedDistrictDisplay();
