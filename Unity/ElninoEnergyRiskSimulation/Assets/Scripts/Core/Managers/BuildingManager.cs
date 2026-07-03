@@ -68,11 +68,13 @@ public class BuildingManager : MonoBehaviour
 
     private bool _isSimulationActive;
     private DistrictType _selectedDistrict = DistrictType.None;
+    private DistrictType _pendingBlackoutDistrict = DistrictType.None;
 
     [Header("매니저 연결")]
     [SerializeField] private DistrictManager districtManager;
     [SerializeField] private BlackoutSimulationController simulationController;
     [SerializeField] private MinimapManager minimapManager;
+    [SerializeField] private MainCameraController mainCameraController;
 
     [Header("정전 연출 설정")]
     [SerializeField] private int buildingsPerBatch = 100;
@@ -144,6 +146,7 @@ public class BuildingManager : MonoBehaviour
         SceneRefs.Resolve(ref districtManager);
         SceneRefs.Resolve(ref simulationController);
         SceneRefs.Resolve(ref minimapManager);
+        SceneRefs.Resolve(ref mainCameraController);
     }
 
     private void Start()
@@ -174,14 +177,16 @@ public class BuildingManager : MonoBehaviour
         if (!SceneRefs.RequireAll(this,
             (districtManager, nameof(districtManager)),
             (simulationController, nameof(simulationController)),
-            (minimapManager, nameof(minimapManager))))
+            (minimapManager, nameof(minimapManager)),
+            (mainCameraController, nameof(mainCameraController))
+            ))
             return;
 
         simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationStart;
         simulationController.OnBlackoutDistrictChanged += HandleDistrictBlackedOut;
         simulationController.OnActiveDistrictsChanged += HandleActiveDistrictsChanged;
-        if (minimapManager != null)
-            minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        mainCameraController.OnEndFlyEnded += HandleFlyEndToStart;
     }
 
     private void OnDisable()
@@ -189,13 +194,16 @@ public class BuildingManager : MonoBehaviour
         if (!SceneRefs.RequireAll(this,
             (districtManager, nameof(districtManager)),
             (simulationController, nameof(simulationController)),
-            (minimapManager, nameof(minimapManager))))
+            (minimapManager, nameof(minimapManager)),
+            (mainCameraController, nameof(mainCameraController))
+            ))
             return;
 
         simulationController.OnBlackoutSimulationToggled -= HandleBlackoutSimulationStart;
         simulationController.OnBlackoutDistrictChanged -= HandleDistrictBlackedOut;
         simulationController.OnActiveDistrictsChanged -= HandleActiveDistrictsChanged;
         minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+        mainCameraController.OnEndFlyEnded -= HandleFlyEndToStart;
     }
 
     IEnumerator InitializeDistrict()
@@ -516,6 +524,8 @@ public class BuildingManager : MonoBehaviour
 
     private void HandleDistrictSelected(DistrictType districtType)
     {
+        if (_isSimulationActive) return;
+
         _selectedDistrict = districtType;
 
         int selectedId = (int)districtType;
@@ -536,17 +546,20 @@ public class BuildingManager : MonoBehaviour
 
     private void HandleDistrictBlackedOut(DistrictType districtType)
     {
-        Debug.Log("[BuildingManager] 구역 정전 연출 시작: " + DataConverter.GetDistrictName(districtType));
-        int districtId = (int)districtType;
-        if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices))
-        {
-            Debug.LogWarning($"[BuildingManager] '{DataConverter.GetDistrictName(districtType)}' 구의 정렬된 인덱스가 없습니다.");
-            return;
-        }
+        _pendingBlackoutDistrict = districtType;
+    }
 
-        if (blackoutCoroutine != null)
-            StopCoroutine(blackoutCoroutine);
+    private void HandleFlyEndToStart()
+    {
+        Debug.Log("[BuildingManager] 구역 정전 연출 시작: " + DataConverter.GetDistrictName(_pendingBlackoutDistrict));
+        if (_pendingBlackoutDistrict == DistrictType.None) return;
 
+        int districtId = (int)_pendingBlackoutDistrict;
+        _pendingBlackoutDistrict = DistrictType.None;
+
+        if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices)) return;
+
+        if (blackoutCoroutine != null) StopCoroutine(blackoutCoroutine);
         blackoutCoroutine = StartCoroutine(BlackoutSequence(sortedIndices));
     }
 

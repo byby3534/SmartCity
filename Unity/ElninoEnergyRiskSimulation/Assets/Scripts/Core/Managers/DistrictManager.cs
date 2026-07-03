@@ -134,7 +134,10 @@ public class DistrictManager : MonoBehaviour
 
         // ── 수요감축 필요도 → GPU 버퍼 반영 ──
         if (_bufferReady)
+        {
             ApplyReductionScoresToBuffer(pureDataDict);
+            Debug.Log("[DistrictManager] 모든 구 데이터 GPU 버퍼 반영 완료.");
+        }
     }
 
     // ── DistrictObject 등록 ──
@@ -210,6 +213,8 @@ public class DistrictManager : MonoBehaviour
         buildingManager.RebuildSortedIndices(); // GPU에서 reductionValue 기준으로 정렬된 인덱스 재생성
 
         Debug.Log($"[DistrictManager] reductionValue 갱신 완료 ({updatedCount}개 건물, 범위 {minScore:F3}~{maxScore:F3})");
+
+        Debug.Log($"[Check] index 0 reductionValue = {buffer[0].reductionValue}, index 100 = {buffer[100].reductionValue}");
     }
 
     // ── 유틸리티 ──
