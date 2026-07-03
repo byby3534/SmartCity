@@ -31,12 +31,15 @@ Material:
     m_Ints: []
     m_Floats:
     - _AmbientStrength: 0.35
+    - _ApiLoaded: 0
     - _ColorMax: 0.8
     - _ColorMin: 0
     m_Colors:
     - _BlackoutColor: {r: 0.02, g: 0.02, b: 0.02, a: 1}
     - _DangerColor: {r: 1, g: 0.09999997, b: 0.09999997, a: 1}
+    - _DefaultColor: {r: 1, g: 1, b: 1, a: 1}
     - _SafeColor: {r: 1, g: 1, b: 1, a: 1}
     - _WarningColor: {r: 1, g: 0.8, b: 0, a: 1}
+    - _ZeroColor: {r: 0, g: 0.5, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
