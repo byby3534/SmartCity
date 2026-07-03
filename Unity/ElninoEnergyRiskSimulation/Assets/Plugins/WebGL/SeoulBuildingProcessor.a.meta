@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 89a553941cc9e4c25a8212b505b224f4
+guid: c7e8f9a0123456789abcdef012345670
 PluginImporter:
   externalObjects: {}
   serializedVersion: 2
@@ -25,7 +25,7 @@ PluginImporter:
   - first:
       WebGL: WebGL
     second:
-      enabled: 0
+      enabled: 1
       settings: {}
   userData: 
   assetBundleName: 

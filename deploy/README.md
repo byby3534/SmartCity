@@ -127,7 +127,7 @@ BuildingManager 담당자와 함께 확인:
 - [ ] Mac 에디터 Play — `Plugins/macOS/SeoulBuildingProcessor.bundle` 로드
 - [ ] `Resources/Districts/*.bytes` 존재
 - [ ] 구역별 메쉬 생성 (`District_Chunk_*` GameObject)
-- [ ] WebGL Build 후 브라우저 — `Plugins/WebGL/SeoulBuildingProcessor.o` 링크
+- [ ] WebGL Build 후 브라우저 — `Plugins/WebGL/SeoulBuildingProcessor.a` 링크 (`.o`는 빌드 중간 산출물, WebGL 비활성)
 - [ ] 정전 시뮬레이션 시 건물 셰이더 반응
 - [ ] Cesium 지형 위 건물 높이 정상
 
