@@ -83,6 +83,8 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+import traceback # 추가
+from datetime import datetime # 추가
 
 load_dotenv()
 
@@ -500,6 +502,7 @@ def weather_current():
 
 @app.get("/power/current")
 def power_current():
+    print("Power API 요청 :", datetime.now()) # 추가
     """
     실시간 공급예비율 데이터.
 
@@ -515,12 +518,14 @@ def power_current():
             "status": "ok",
             "power": power
         })
-
+    
     except Exception as e:
+        traceback.print_exc()
         return jsonify({
             "status": "error",
+            "type": type(e).__name__,
             "message": str(e)
-        }), 500
+            }), 500
 
 if __name__ == "__main__":
     port = int(os.getenv("FLASK_PORT", 5001))
