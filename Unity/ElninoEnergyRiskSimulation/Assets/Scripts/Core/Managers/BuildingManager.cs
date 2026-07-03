@@ -560,7 +560,7 @@ public class BuildingManager : MonoBehaviour
         if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices)) return;
 
         if (blackoutCoroutine != null) StopCoroutine(blackoutCoroutine);
-        blackoutCoroutine = StartCoroutine(BlackoutSequence(sortedIndices));
+        blackoutCoroutine = StartCoroutine(BlackoutSequence(_pendingBlackoutDistrict, sortedIndices));
     }
 
     IEnumerator BlackoutSequence(DistrictType districtType, int[] sortedIndices)
