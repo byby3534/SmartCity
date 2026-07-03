@@ -5,7 +5,9 @@
         "Unity.TextMeshPro",
         "CesiumForUnity",
         "Unity.Mathematics",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Nova",
+        "Nova.UIControls"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

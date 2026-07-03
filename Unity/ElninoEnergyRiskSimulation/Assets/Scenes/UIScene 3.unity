@@ -2477,6 +2477,7 @@ GameObject:
   - component: {fileID: 353781314}
   - component: {fileID: 353781313}
   - component: {fileID: 353781312}
+  - component: {fileID: 353781316}
   m_Layer: 5
   m_Name: RootCanvas
   m_TagString: Untagged
@@ -2484,6 +2485,25 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &353781316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353781311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7c4e2f19b3d4a6e8f0c1d2e3f4a5b6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::BlurPanelLayoutSync
+  leftSidebar: {fileID: 1514930048}
+  rightSidebar: {fileID: 1006782869}
+  leftBlurPanel: {fileID: 6012351602697509062}
+  rightBlurPanel: {fileID: 1993467351}
+  leftBlurEffect: {fileID: 2210523124201968810}
+  rightBlurEffect: {fileID: 1993467350}
+  rootCanvas: {fileID: 353781314}
 --- !u!114 &353781312
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14226,7 +14246,7 @@ Transform:
   m_GameObject: {fileID: 1993467347}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 800, y: -29, z: 0}
+  m_LocalPosition: {x: 800, y: -30, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -14298,7 +14318,7 @@ MonoBehaviour:
         Raw: 800
         Type: 0
       Y:
-        Raw: -29
+        Raw: -30
         Type: 0
       Z:
         Raw: 0
@@ -14506,7 +14526,7 @@ MonoBehaviour:
       Direction: 0
     Image:
       Adjustment:
-        CenterUV: {x: 0.83333325, y: -0.053703725}
+        CenterUV: {x: 0.83333325, y: -0.055555522}
         UVScale: {x: 5.3333335, y: 1.0485437}
         PixelsPerUnitMultiplier: 1
         scaleMode: 0
@@ -15770,7 +15790,7 @@ Transform:
   m_GameObject: {fileID: 7186941309576745230}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -780, y: -29, z: 0}
+  m_LocalPosition: {x: -780, y: -30, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15999,7 +16019,7 @@ MonoBehaviour:
         Raw: -780
         Type: 0
       Y:
-        Raw: -29
+        Raw: -30
         Type: 0
       Z:
         Raw: 0
@@ -16207,7 +16227,7 @@ MonoBehaviour:
       Direction: 0
     Image:
       Adjustment:
-        CenterUV: {x: -0.8125, y: -0.053703725}
+        CenterUV: {x: -0.8125, y: -0.055555522}
         UVScale: {x: 5.3333335, y: 1.0485437}
         PixelsPerUnitMultiplier: 1
         scaleMode: 0
