@@ -82,7 +82,9 @@ public class ApiClient : MonoBehaviour
     // 현재 공급예비율 - 0702 추가
     public void FetchCurrentPower(Action<JObject> onSuccess)
     {
-        StartCoroutine(GetJObject($"{serverUrl}/power/current", onSuccess));
+        // StartCoroutine(GetJObject($"{serverUrl}/power/current", onSuccess));
+        StartCoroutine(GetJObject(ApiUrl("/power/current"), onSuccess));
+
     }
 
     // -----------------------------------------------------------------------

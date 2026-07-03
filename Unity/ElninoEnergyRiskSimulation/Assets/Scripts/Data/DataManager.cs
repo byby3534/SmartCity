@@ -109,7 +109,7 @@ public class DataManager : MonoBehaviour
         {
             if (data == null)
             {
-                Debug.LogError("Current Temp API 응답 Null");
+                Debug.LogWarning("[DataManager] Current Temp API 응답 Null → API 연결을 확인하세요.");
                 return;
             }
 
@@ -128,14 +128,31 @@ public class DataManager : MonoBehaviour
         {
             if (data == null)
             {
-                Debug.LogError("Current Power API 응답 Null");
+                Debug.LogWarning("[DataManager] Current Power API 응답 Null → API 연결을 확인하세요.");
+
+                JObject defaultPower = new JObject
+                {
+                    // 데이터가 들어오지 않으면 기본값 사용하도록
+                    ["baseDatetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ["suppReserveRate"] = ReserveRateStagePalette.DefaultReserveRate
+                };
+
+                OnCurrentPowerUpdated?.Invoke(defaultPower);
                 return;
             }
 
             JObject power = data["power"] as JObject;
 
             if (power == null)
-                return;
+            {
+                Debug.LogWarning("[DataManager] Current Power 데이터 없음 → 기본 공급예비율 사용");
+
+                power = new JObject
+                {
+                    ["baseDatetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ["suppReserveRate"] = ReserveRateStagePalette.DefaultReserveRate
+                };
+            }
 
             OnCurrentPowerUpdated?.Invoke(power);
         });
