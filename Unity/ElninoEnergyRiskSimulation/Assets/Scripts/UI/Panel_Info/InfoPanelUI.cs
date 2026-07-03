@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class InfoPanelUI : MonoBehaviour
 {
+    private const DistrictType DefaultDistrict = DistrictType.JONGNO;
+
     [Header("HUD")]
     public GameObject Panel_HUD_Info;
     public GameObject Panel_HUD_Status;
@@ -24,7 +26,7 @@ public class InfoPanelUI : MonoBehaviour
     private bool _hasPredictContext;
     private readonly List<OniRangeData> _oniRangeEntries = new();
     private readonly Dictionary<DistrictType, float> _districtTemperatures = new();
-    private DistrictType _selectedDistrict = DistrictType.JONGNO;
+    private DistrictType _selectedDistrict = DefaultDistrict;
     private string cachedTemperatureText;
     private string cachedEmergencyStage;
     private int _currentStageLevel = -1;
@@ -36,8 +38,19 @@ public class InfoPanelUI : MonoBehaviour
         SceneRefs.Resolve(ref minimapManager);
         SceneRefs.Resolve(ref reserveRateState);
 
-        ResolveReferences();
+        WarnMissingReferences();
         RefreshRealtimeDateDisplay();
+    }
+
+    private void WarnMissingReferences()
+    {
+        SceneRefs.RequireAll(this,
+            (Panel_HUD_Info, nameof(Panel_HUD_Info)),
+            (Panel_HUD_Status, nameof(Panel_HUD_Status)),
+            (Text_Date_Info, nameof(Text_Date_Info)),
+            (Text_Temperature_Info, nameof(Text_Temperature_Info)),
+            (Text_Emergency_Value, nameof(Text_Emergency_Value)),
+            (Img_Emergency_Dot, nameof(Img_Emergency_Dot)));
     }
 
     private void OnEnable()
@@ -109,7 +122,7 @@ public class InfoPanelUI : MonoBehaviour
             return;
 
         _hasPredictContext = true;
-        _selectedDistrict = DistrictType.JONGNO;
+        _selectedDistrict = DefaultDistrict;
         _districtTemperatures.Clear();
 
         if (Text_Date_Info != null)
@@ -277,97 +290,4 @@ public class InfoPanelUI : MonoBehaviour
         return closest;
     }
 
-    private void ResolveReferences()
-    {
-        if (Panel_HUD_Info == null)
-            Panel_HUD_Info = FindChildPanel("Panel_HUD_Info");
-
-        if (Panel_HUD_Status == null)
-            Panel_HUD_Status = FindChildPanel("Panel_HUD_Status");
-
-        GameObject searchRoot = GetSearchRoot();
-
-        if (Text_Date_Info == null) Text_Date_Info = FindText(searchRoot, "Text_Date_Info");
-        if (Text_Temperature_Info == null) Text_Temperature_Info = FindText(searchRoot, "Text_Temperature_Info");
-        if (Text_Emergency_Value == null) Text_Emergency_Value = FindText(searchRoot, "Text_Emergency_Value");
-
-        if (Img_Emergency_Dot == null)
-        {
-            Img_Emergency_Dot = FindImage(searchRoot, "Img_Emergency_Dot");
-            if (Img_Emergency_Dot == null)
-                Img_Emergency_Dot = FindImage(searchRoot, "Dot");
-        }
-    }
-
-    private GameObject GetSearchRoot()
-    {
-        if (Panel_HUD_Info != null)
-            return Panel_HUD_Info;
-
-        Transform current = transform;
-        while (current != null)
-        {
-            if (current.name == "HUD_Header")
-                return current.gameObject;
-
-            current = current.parent;
-        }
-
-        return gameObject;
-    }
-
-    private GameObject FindChildPanel(string panelName)
-    {
-        Transform current = transform;
-        while (current != null)
-        {
-            Transform found = current.Find(panelName);
-            if (found != null)
-                return found.gameObject;
-
-            if (current.name == panelName)
-                return current.gameObject;
-
-            current = current.parent;
-        }
-
-        Transform[] transforms = GetComponentsInChildren<Transform>(true);
-        foreach (Transform target in transforms)
-        {
-            if (target.name == panelName)
-                return target.gameObject;
-        }
-
-        return null;
-    }
-
-    private static TMP_Text FindText(GameObject searchRoot, string objectName)
-    {
-        if (searchRoot == null)
-            return null;
-
-        TMP_Text[] texts = searchRoot.GetComponentsInChildren<TMP_Text>(true);
-        foreach (TMP_Text text in texts)
-        {
-            if (text.gameObject.name == objectName)
-                return text;
-        }
-
-        return null;
-    }
-
-    private static Image FindImage(GameObject searchRoot, string objectName)
-    {
-        if (searchRoot == null)
-            return null;
-
-        Image[] images = searchRoot.GetComponentsInChildren<Image>(true);
-        foreach (Image image in images)
-        {
-            if (image.gameObject.name == objectName)
-                return image;
-        }
-
-        return null;
-    }
 }

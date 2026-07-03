@@ -324,7 +324,9 @@ public class SimulationDatePicker : MonoBehaviour
 
         var image = _backdrop.GetComponent<Image>();
         image.color = new Color(0f, 0f, 0f, 0.01f);
-        image.raycastTarget = true;
+        // 바깥 클릭 닫기는 Update + IsPointerOverPicker가 처리한다.
+        // raycast를 켜면 연 선택 팝업이 열린 동안 월 카드 클릭이 막힌다.
+        image.raycastTarget = false;
         _backdrop.SetActive(false);
     }
 
@@ -371,6 +373,7 @@ public class SimulationDatePicker : MonoBehaviour
         var yearRect = yearPopup.GetComponent<RectTransform>();
         PlaceDropdown(yearRect, placementRect, yearDropdownHeight);
         BringPopupToFront(yearPopup);
+        BringDateCardsToFront();
         yearPopup.SetActive(true);
         SetBackdropActive(true);
         ConfigurePopupScroll(yearPopup);
@@ -381,14 +384,30 @@ public class SimulationDatePicker : MonoBehaviour
     {
         EnsurePopups();
         bool wasOpen = monthPopup != null && monthPopup.activeSelf;
-        ClosePopups();
+        CloseYearPopup();
         if (wasOpen || monthPopup == null || _monthCardRect == null) return;
 
         var monthRect = monthPopup.GetComponent<RectTransform>();
         PlaceDropdown(monthRect, _monthCardRect, monthRect.sizeDelta.y);
         BringPopupToFront(monthPopup);
+        BringDateCardsToFront();
         monthPopup.SetActive(true);
         SetBackdropActive(true);
+    }
+
+    private void CloseYearPopup()
+    {
+        if (yearPopup != null)
+            yearPopup.SetActive(false);
+
+        if (monthPopup == null || !monthPopup.activeSelf)
+            SetBackdropActive(false);
+    }
+
+    private void BringDateCardsToFront()
+    {
+        if (_dateRowRect != null)
+            _dateRowRect.SetAsLastSibling();
     }
 
     private void BringPopupToFront(GameObject popup)
@@ -624,7 +643,6 @@ public class SimulationDatePicker : MonoBehaviour
         dropdown.anchorMax = new Vector2(0.5f, 0.5f);
         dropdown.sizeDelta = new Vector2(card.rect.width, height);
 
-        Camera eventCamera = GetEventCamera();
         Vector3[] corners = new Vector3[4];
         card.GetWorldCorners(corners);
 
@@ -633,8 +651,8 @@ public class SimulationDatePicker : MonoBehaviour
         float cardTopY = corners[1].y;
 
         RectTransform overlayRect = _popupOverlay as RectTransform;
-        float spaceBelow = GetSpaceBelowCard(overlayRect, cardBottomY, eventCamera);
-        float spaceAbove = GetSpaceAboveCard(overlayRect, cardTopY, eventCamera);
+        float spaceBelow = GetSpaceBelowCard(overlayRect, cardBottomY);
+        float spaceAbove = GetSpaceAboveCard(overlayRect, cardTopY);
         bool openUpward = spaceBelow < height + dropdownGap && spaceAbove > spaceBelow;
 
         if (openUpward)
@@ -649,19 +667,7 @@ public class SimulationDatePicker : MonoBehaviour
         }
     }
 
-    private Camera GetEventCamera()
-    {
-        if (_rootCanvas == null)
-            _rootCanvas = GetComponentInParent<Canvas>();
-        if (_rootCanvas == null)
-            return null;
-
-        return _rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay
-            ? null
-            : _rootCanvas.worldCamera;
-    }
-
-    private static float GetSpaceBelowCard(RectTransform overlayRect, float cardBottomY, Camera eventCamera)
+    private static float GetSpaceBelowCard(RectTransform overlayRect, float cardBottomY)
     {
         if (overlayRect == null)
             return float.MaxValue;
@@ -671,7 +677,7 @@ public class SimulationDatePicker : MonoBehaviour
         return cardBottomY - overlayCorners[0].y;
     }
 
-    private static float GetSpaceAboveCard(RectTransform overlayRect, float cardTopY, Camera eventCamera)
+    private static float GetSpaceAboveCard(RectTransform overlayRect, float cardTopY)
     {
         if (overlayRect == null)
             return float.MaxValue;

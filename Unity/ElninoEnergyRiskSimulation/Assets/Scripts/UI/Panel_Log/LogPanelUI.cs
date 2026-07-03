@@ -18,11 +18,10 @@ public class LogPanelUI : MonoBehaviour
     [SerializeField] private float indentPixels = 14f;
     [SerializeField] private int maxLines = 120;
 
-    [Header("Colors")]
-    [SerializeField] private Color normalColor = new(0.39f, 0.45f, 0.55f, 1f);
-    [SerializeField] private Color mutedColor = new(0.55f, 0.58f, 0.65f, 1f);
-    [SerializeField] private Color emphasisColor = new(0.06f, 0.09f, 0.16f, 1f);
-    [SerializeField] private Color districtCompleteColor = new(0.85f, 0.19f, 0.19f, 1f);
+    private Color normalColor;
+    private Color mutedColor;
+    private Color emphasisColor;
+    private Color districtCompleteColor;
 
     private readonly Queue<GameObject> _lines = new();
 

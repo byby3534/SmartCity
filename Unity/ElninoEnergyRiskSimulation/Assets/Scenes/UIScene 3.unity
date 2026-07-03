@@ -2498,7 +2498,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 358682871}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0103824e-16, z: 4.954275e-16, w: 1}
   m_LocalPosition: {x: -2.7823968e-16, y: 1.8873791e-14, z: 10}
   m_LocalScale: {x: 0.010691672, y: 0.010691672, z: 0.010691672}
   m_ConstrainProportionsScale: 0
@@ -3560,9 +3560,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87f7402ceed564ee184a93a9c0242d41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SmartCity.Scripts::BlackoutLogger
-  dataManager: {fileID: 1567278800}
-  simulationController: {fileID: 1131763331}
-  logIntervalSeconds: 0.5
 --- !u!4 &406638329
 Transform:
   m_ObjectHideFlags: 0
@@ -4364,7 +4361,7 @@ GameObject:
   - component: {fileID: 454180062}
   - component: {fileID: 454180065}
   m_Layer: 5
-  m_Name: Btn_BlakcoutSimulation
+  m_Name: Btn_BlackoutSimulation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6810,9 +6807,30 @@ MonoBehaviour:
   ratioText: {fileID: 1674258645}
   barBackground: {fileID: 438727033}
   barFill: {fileID: 319898004}
-  donutSegments: []
-  legendDots: []
-  legendTexts: []
+  donutSegments:
+  - {fileID: 1130255780}
+  - {fileID: 1077395778}
+  - {fileID: 1168348634}
+  - {fileID: 1810046405}
+  - {fileID: 1348101652}
+  - {fileID: 1941882339}
+  - {fileID: 439786270}
+  legendDots:
+  - {fileID: 663784192}
+  - {fileID: 1095042185}
+  - {fileID: 605782473}
+  - {fileID: 1397934992}
+  - {fileID: 580420982}
+  - {fileID: 36500219}
+  - {fileID: 864585423}
+  legendTexts:
+  - {fileID: 1935965725}
+  - {fileID: 677492631}
+  - {fileID: 1213224973}
+  - {fileID: 2054147461}
+  - {fileID: 793674242}
+  - {fileID: 564674357}
+  - {fileID: 783517652}
   dataManager: {fileID: 1567278800}
   minimapManager: {fileID: 1966207135}
 --- !u!1 &814024125
@@ -6903,7 +6921,7 @@ GameObject:
   - component: {fileID: 815813906}
   - component: {fileID: 815813905}
   m_Layer: 5
-  m_Name: Panel_UsgaeDonut
+  m_Name: Panel_UsageDonut
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9533,7 +9551,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: SmartCity.Scripts::LogEventBridge
   uiController: {fileID: 708179733}
   minimapManager: {fileID: 1966207135}
+  dataManager: {fileID: 0}
   simulationController: {fileID: 1131763331}
+  facilityLogIntervalSeconds: 0.5
 --- !u!114 &1170966946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11112,7 +11132,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1394554671}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0103824e-16, z: 4.954275e-16, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -11289,7 +11309,7 @@ MonoBehaviour:
     c0:
       x: -0.7987321333648472
       y: -0.601686778257957
-      z: 0.000000000000000284357585944316
+      z: 0.00000000000000028479313808567047
       w: 0
     c1:
       x: -0.4771413573014902
@@ -15216,7 +15236,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5488446694798087878}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0103824e-16, z: 4.954275e-16, w: 1}
   m_LocalPosition: {x: -2.7823968e-16, y: 1.8873791e-14, z: 10}
   m_LocalScale: {x: 0.010691672, y: 0.010691672, z: 0.010691672}
   m_ConstrainProportionsScale: 1
@@ -15279,7 +15299,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1960232210897840520}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: 1.8700801e-31, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: 1.8692772e-31, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

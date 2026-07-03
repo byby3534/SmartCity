@@ -9,6 +9,8 @@ using Unity.Mathematics;
 public class GuBoundaryDecal : MonoBehaviour
 {
     [SerializeField] private MinimapManager minimapManager;
+    [SerializeField] private BlackoutSimulationController simulationController;
+
     [Header("GeoJSON")]
     public string fileName = "seoul_district.geojson";
 
@@ -44,15 +46,60 @@ public class GuBoundaryDecal : MonoBehaviour
         public List<JArray> outerRings;
     }
 
+    private void Awake()
+    {
+        SceneRefs.Resolve(ref minimapManager);
+        SceneRefs.Resolve(ref simulationController);
+    }
+
     private void OnEnable()
     {
-        minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        if (simulationController != null)
+            simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+
+        UpdateDistrictSelectionSubscription();
     }
 
     private void OnDisable()
     {
-        minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+        if (simulationController != null)
+            simulationController.OnBlackoutSimulationToggled -= HandleSimulationToggled;
+
+        UnsubscribeDistrictSelection();
     }
+
+    private void HandleSimulationToggled(bool isOn)
+    {
+        UpdateDistrictSelectionSubscription();
+    }
+
+    private void UpdateDistrictSelectionSubscription()
+    {
+        if (simulationController != null && simulationController.IsSimulating)
+            UnsubscribeDistrictSelection();
+        else
+            SubscribeDistrictSelection();
+    }
+
+    private void SubscribeDistrictSelection()
+    {
+        if (minimapManager == null || _districtSelectionSubscribed)
+            return;
+
+        minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        _districtSelectionSubscribed = true;
+    }
+
+    private void UnsubscribeDistrictSelection()
+    {
+        if (minimapManager == null || !_districtSelectionSubscribed)
+            return;
+
+        minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+        _districtSelectionSubscribed = false;
+    }
+
+    private bool _districtSelectionSubscribed;
 
     private void Start()
     {
