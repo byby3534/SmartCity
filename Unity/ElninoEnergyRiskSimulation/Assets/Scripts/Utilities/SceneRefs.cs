@@ -15,6 +15,30 @@ public static class SceneRefs
             : Object.FindFirstObjectByType<T>();
     }
 
+    /// <summary>
+    /// 같은(또는 지정) GameObject에 붙는 컴포넌트용.
+    /// 인스펙터 연결 우선 → GetComponent → 없으면 AddComponent.
+    /// </summary>
+    public static void EnsureOn<T>(ref T reference, GameObject host, bool includeChildren = false) where T : Component
+    {
+        if (reference != null) return;
+
+        reference = includeChildren
+            ? host.GetComponentInChildren<T>(true)
+            : host.GetComponent<T>();
+
+        if (reference != null) return;
+
+        // abstract 컴포넌트(Graphic, TMP_Text 등)는 AddComponent가 불가능하므로 호출부에서 직접 GetComponent 처리한다.
+        if (typeof(T).IsAbstract)
+        {
+            Debug.LogError($"[SceneRefs] {typeof(T).Name}은(는) abstract라 자동 부착할 수 없습니다. 인스펙터에서 연결하세요.", host);
+            return;
+        }
+
+        reference = host.AddComponent<T>();
+    }
+
     public static bool Require(MonoBehaviour owner, Object reference, string fieldName)
     {
         if (reference != null) return true;

@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -10,19 +12,28 @@ public class LogEventBridge : MonoBehaviour
     [Header("참조")]
     [SerializeField] private UIController uiController;
     [SerializeField] private MinimapManager minimapManager;
+    [SerializeField] private DataManager dataManager;
     [SerializeField] private BlackoutSimulationController simulationController;
+
+    [Header("구역 단전 로그")]
+    [SerializeField] private float facilityLogIntervalSeconds = 0.5f;
 
     private bool _simulationRunning;
     private bool _simulationCompletedNaturally;
 
+    private readonly Dictionary<DistrictType, List<BlackoutBuildingItem>> _blackoutItemsMap = new();
+    private Coroutine _facilityLogCoroutine;
+
+    private DistrictType _activeDistrict;
+    private bool _facilityLogsDone;
+    private bool _blackoutVisualDone;
+
     private void Awake()
     {
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
-        if (minimapManager == null)
-            minimapManager = FindFirstObjectByType<MinimapManager>();
-        if (simulationController == null)
-            simulationController = FindFirstObjectByType<BlackoutSimulationController>();
+        SceneRefs.Resolve(ref uiController);
+        SceneRefs.Resolve(ref minimapManager);
+        SceneRefs.Resolve(ref dataManager);
+        SceneRefs.Resolve(ref simulationController);
     }
 
     private void OnEnable()
@@ -36,9 +47,14 @@ public class LogEventBridge : MonoBehaviour
         if (minimapManager != null)
             minimapManager.OnDistrictSelected += HandleDistrictSelected;
 
+        if (dataManager != null)
+            dataManager.OnBlackoutItemsParsed += HandleBlackoutItemsParsed;
+
         if (simulationController != null)
         {
             simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+            simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
+            simulationController.OnDistrictBlackoutPhase += HandleDistrictBlackoutPhase;
             simulationController.OnSimulationCompleted += HandleSimulationCompleted;
         }
     }
@@ -54,11 +70,96 @@ public class LogEventBridge : MonoBehaviour
         if (minimapManager != null)
             minimapManager.OnDistrictSelected -= HandleDistrictSelected;
 
+        if (dataManager != null)
+            dataManager.OnBlackoutItemsParsed -= HandleBlackoutItemsParsed;
+
         if (simulationController != null)
         {
             simulationController.OnBlackoutSimulationToggled -= HandleSimulationToggled;
+            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
+            simulationController.OnDistrictBlackoutPhase -= HandleDistrictBlackoutPhase;
             simulationController.OnSimulationCompleted -= HandleSimulationCompleted;
         }
+    }
+
+    private void HandleBlackoutItemsParsed(Dictionary<DistrictType, List<BlackoutBuildingItem>> itemsMap)
+    {
+        _blackoutItemsMap.Clear();
+        if (itemsMap == null) return;
+
+        foreach (var kvp in itemsMap)
+            _blackoutItemsMap[kvp.Key] = kvp.Value;
+    }
+
+    private void HandleDistrictBlackedOut(DistrictType districtType, double consumptionMwh)
+    {
+        _activeDistrict = districtType;
+        _facilityLogsDone = false;
+        _blackoutVisualDone = false;
+
+        if (_facilityLogCoroutine != null)
+            StopCoroutine(_facilityLogCoroutine);
+
+        string guName = DataConverter.GetDistrictName(districtType);
+        SimulationLog.Write($"{guName} 순환 단전 진행 중", LogLineStyle.Emphasis);
+        _facilityLogCoroutine = StartCoroutine(LogFacilityBlackout(districtType));
+    }
+
+    private IEnumerator LogFacilityBlackout(DistrictType districtType)
+    {
+        if (_blackoutItemsMap.TryGetValue(districtType, out var items) && items.Count > 0)
+        {
+            foreach (var item in items)
+            {
+                yield return new WaitForSeconds(facilityLogIntervalSeconds);
+
+                string label = string.IsNullOrEmpty(item.buildingType)
+                    ? "기타 시설"
+                    : item.buildingType;
+                SimulationLog.Write($"{label} 전력 차단", LogLineStyle.Muted, indent: 1);
+            }
+        }
+        else
+        {
+            SimulationLog.Write("차단 대상 시설 정보 없음", LogLineStyle.Muted, indent: 1);
+        }
+
+        _facilityLogsDone = true;
+        _facilityLogCoroutine = null;
+        TryWriteBlackoutComplete();
+    }
+
+    private void HandleDistrictBlackoutPhase(DistrictType districtType, DistrictBlackoutPhase phase)
+    {
+        if (districtType != _activeDistrict)
+            return;
+
+        string guName = DataConverter.GetDistrictName(districtType);
+
+        switch (phase)
+        {
+            case DistrictBlackoutPhase.BlackoutComplete:
+                _blackoutVisualDone = true;
+                TryWriteBlackoutComplete();
+                break;
+
+            case DistrictBlackoutPhase.RestoreStarted:
+                SimulationLog.Write($"{guName} 전력 복구 중", LogLineStyle.Emphasis);
+                break;
+
+            case DistrictBlackoutPhase.RestoreComplete:
+                SimulationLog.Write($"{guName} 구역 복전 완료", LogLineStyle.DistrictComplete);
+                break;
+        }
+    }
+
+    private void TryWriteBlackoutComplete()
+    {
+        if (!_facilityLogsDone || !_blackoutVisualDone)
+            return;
+
+        string guName = DataConverter.GetDistrictName(_activeDistrict);
+        SimulationLog.Write($"{guName} 순환 단전 완료", LogLineStyle.DistrictComplete);
     }
 
     private void HandleDateSelected(string year, string month)
@@ -95,6 +196,13 @@ public class LogEventBridge : MonoBehaviour
         }
 
         _simulationRunning = false;
+
+        if (_facilityLogCoroutine != null)
+        {
+            StopCoroutine(_facilityLogCoroutine);
+            _facilityLogCoroutine = null;
+        }
+
         if (!_simulationCompletedNaturally)
             SimulationLog.Write("순환 단전 시뮬레이션을 중단했습니다.");
     }

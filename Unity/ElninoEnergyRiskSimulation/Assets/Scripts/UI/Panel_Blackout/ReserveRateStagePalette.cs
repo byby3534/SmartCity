@@ -77,19 +77,4 @@ public static class ReserveRateStagePalette
     }
 
     public static bool CanSimulate(int level) => level >= 4;
-
-    public static int FromEmergencyLabel(string label)
-    {
-        return label switch
-        {
-            "심각" => 4,
-            "경계" => 3,
-            "주의" => 2,
-            "관심" => 1,
-            _ => 0,
-        };
-    }
-
-    public static Color GetColorForEmergencyLabel(string label) =>
-        GetSegmentColor(FromEmergencyLabel(label));
 }

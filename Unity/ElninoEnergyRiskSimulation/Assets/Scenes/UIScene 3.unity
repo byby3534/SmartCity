@@ -2498,7 +2498,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 358682871}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.020562e-16, y: 2.1724268e-16, z: 4.936401e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
   m_LocalPosition: {x: -2.7823968e-16, y: 1.8873791e-14, z: 10}
   m_LocalScale: {x: 0.010691672, y: 0.010691672, z: 0.010691672}
   m_ConstrainProportionsScale: 0
@@ -3067,7 +3067,10 @@ PrefabInstance:
     - {fileID: 7974240411382410331, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
     - {fileID: 4780921253663895104, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
     - {fileID: 2563397207717470007, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1301005344}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 8626113785183535837, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
       insertIndex: -1
@@ -4483,9 +4486,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2134f8f44aca49c588d0416f2929561d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SmartCity.Scripts::RollingBlackoutStartButton
-  dataManager: {fileID: 1567278800}
   uiController: {fileID: 708179733}
   simulationController: {fileID: 1131763331}
+  reserveRateState: {fileID: 0}
   button: {fileID: 454180063}
   buttonBackground: {fileID: 454180062}
   buttonLabel: {fileID: 176103430}
@@ -7637,8 +7640,8 @@ MonoBehaviour:
   _longitude: 126.9908
   _height: 2000
   _ecefX: -3048017.2610839223
-  _ecefY: 4046207.1254533823
-  _ecefZ: 3865652.3985625315
+  _ecefY: 4046207.125453382
+  _ecefZ: 3865652.398562532
   _scale: 1
 --- !u!4 &916403144
 Transform:
@@ -7860,6 +7863,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 925076175}
   m_CullTransparentMesh: 1
+--- !u!4 &960737943 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+  m_PrefabInstance: {fileID: 360179007}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &970310729
 GameObject:
   m_ObjectHideFlags: 0
@@ -10616,6 +10624,56 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1278754192}
   m_CullTransparentMesh: 1
+--- !u!1 &1301005343
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1301005344}
+  - component: {fileID: 1301005345}
+  m_Layer: 0
+  m_Name: ReserveRateStateController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1301005344
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1301005343}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4808.1514, y: 1749.8583, z: 48189.26}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 960737943}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1301005345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1301005343}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9e5a3b64d0f6c8a1b2e4f7d0a3c6b95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::ReserveRateStateController
+  dataManager: {fileID: 1567278800}
+  uiController: {fileID: 708179733}
+  simulationController: {fileID: 1131763331}
+  simulationFullRecoveryRatio: 0.3
+  simCompletedHoldSeconds: 2
+  simCompletedTailSeconds: 1
 --- !u!1 &1334487223
 GameObject:
   m_ObjectHideFlags: 0
@@ -11054,7 +11112,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1394554671}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.020562e-16, y: 2.1724268e-16, z: 4.936401e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -11229,24 +11287,24 @@ MonoBehaviour:
   _detectTransformChanges: 1
   _localToGlobeFixedMatrix:
     c0:
-      x: -0.7987321333648473
-      y: -0.6016867782579571
-      z: 0.00000000000000023422407983614175
+      x: -0.7987321333648472
+      y: -0.601686778257957
+      z: 0.000000000000000284357585944316
       w: 0
     c1:
       x: -0.4771413573014902
       y: 0.6333995494091254
-      z: 0.6092135388850191
+      z: 0.6092135388850192
       w: 0
     c2:
-      x: 0.3665557314828559
-      y: -0.48659842958837957
-      z: 0.7930062194202463
+      x: 0.366555731482856
+      y: -0.4865984295883795
+      z: 0.7930062194202461
       w: 0
     c3:
       x: -3048017.2610839223
-      y: 4046207.1254533823
-      z: 3865652.3985625315
+      y: 4046207.125453382
+      z: 3865652.398562532
       w: 1
   _localToGlobeFixedMatrixIsValid: 1
 --- !u!114 &1394554677
@@ -12367,6 +12425,7 @@ MonoBehaviour:
   dataManager: {fileID: 1567278800}
   uiController: {fileID: 0}
   minimapManager: {fileID: 0}
+  reserveRateState: {fileID: 0}
 --- !u!1 &1657579108
 GameObject:
   m_ObjectHideFlags: 0
@@ -13864,6 +13923,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SmartCity.Scripts::MinimapColorController
   minimapManager: {fileID: 1966207135}
   dataManager: {fileID: 1567278800}
+  uiController: {fileID: 0}
   simulationController: {fileID: 1131763331}
   lowPowerColor: {r: 1, g: 0.9, b: 0.75, a: 0.9}
   highPowerColor: {r: 1, g: 0.25, b: 0.05, a: 0.9}
@@ -15156,7 +15216,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5488446694798087878}
   serializedVersion: 2
-  m_LocalRotation: {x: -9.020562e-16, y: 2.1724268e-16, z: 4.936401e-16, w: 1}
+  m_LocalRotation: {x: -9.298118e-16, y: 2.0112459e-16, z: 4.9536117e-16, w: 1}
   m_LocalPosition: {x: -2.7823968e-16, y: 1.8873791e-14, z: 10}
   m_LocalScale: {x: 0.010691672, y: 0.010691672, z: 0.010691672}
   m_ConstrainProportionsScale: 1
@@ -15219,7 +15279,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1960232210897840520}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: 1.9596511e-31, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: 1.8700801e-31, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

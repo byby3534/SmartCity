@@ -40,10 +40,8 @@ public class DataManager : MonoBehaviour
 
     private void Awake()
     {
-        if (apiClient == null)
-            apiClient = GetComponent<ApiClient>();
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
+        SceneRefs.EnsureOn(ref apiClient, gameObject);
+        SceneRefs.Resolve(ref uiController);
     }
 
     private void Start()
