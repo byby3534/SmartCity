@@ -71,7 +71,21 @@ public class SimulationDatePicker : MonoBehaviour
     private RectTransform _monthCardRect;
     private RectTransform _dateRowRect;
     private Canvas _rootCanvas;
+    private bool _interactionEnabled = true;
 
+    /// <summary>시뮬레이션 중 연·월 카드 선택 차단 (ONI 슬라이더와 동일).</summary>
+    public void SetInteractionEnabled(bool enabled)
+    {
+        _interactionEnabled = enabled;
+
+        if (yearCardButton != null)
+            yearCardButton.interactable = enabled;
+        if (monthCardButton != null)
+            monthCardButton.interactable = enabled;
+
+        if (!enabled)
+            ClosePopups();
+    }
     private void Awake()
     {
         // Sidebar 안에서 Simulation_List/ONI 패널과 영역이 겹칠 때 연·월 카드 클릭이 막히지 않도록 맨 앞으로 올린다.
@@ -364,6 +378,8 @@ public class SimulationDatePicker : MonoBehaviour
 
     private void OpenYearPopup()
     {
+        if (!_interactionEnabled) return;
+
         EnsurePopups();
         bool wasOpen = yearPopup != null && yearPopup.activeSelf;
         ClosePopups();
@@ -382,6 +398,8 @@ public class SimulationDatePicker : MonoBehaviour
 
     private void OpenMonthPopup()
     {
+        if (!_interactionEnabled) return;
+
         EnsurePopups();
         bool wasOpen = monthPopup != null && monthPopup.activeSelf;
         CloseYearPopup();

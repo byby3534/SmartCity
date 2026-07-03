@@ -103,7 +103,10 @@ public class UIController : MonoBehaviour
     {
         _simulationController = FindFirstObjectByType<BlackoutSimulationController>();
         if (_simulationController != null)
+        {
             _simulationController.OnBlackoutSimulationToggled += HandleBlackoutSimulationToggled;
+            HandleBlackoutSimulationToggled(_simulationController.IsSimulating);
+        }
     }
 
     private void OnDisable()
@@ -208,5 +211,7 @@ public class UIController : MonoBehaviour
 
         if (oniSlider != null)
             oniSlider.interactable = IsOniPanelVisible && !isOn;
+
+        datePicker?.SetInteractionEnabled(!isOn);
     }
 }
