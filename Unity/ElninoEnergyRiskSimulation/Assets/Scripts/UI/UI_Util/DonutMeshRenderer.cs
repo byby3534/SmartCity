@@ -121,11 +121,13 @@ public class DonutMeshRenderer : Graphic
         vh.AddVert(v);
     }
 
+#if UNITY_EDITOR
     protected override void Reset()
     {
         base.Reset();
         baseColor = color;
     }
+#endif
 
 #if UNITY_EDITOR
     protected override void OnValidate()

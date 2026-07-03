@@ -3,7 +3,9 @@
     "rootNamespace": "",
     "references": [
         "SmartCity.Scripts",
-        "UnityEditor.UI"
+        "UnityEditor.UI",
+        "CesiumForUnity",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"

@@ -21,7 +21,8 @@ trap cleanup EXIT
 
 mkdir -p "$WWW_DIR"
 
-if [[ ! -f "$WWW_DIR/index.html" ]]; then
+# Unity index.html이 없고 www가 비어 있을 때만 placeholder 생성
+if [[ ! -f "$WWW_DIR/index.html" ]] && [[ ! -d "$WWW_DIR/Build" ]]; then
   cat > "$WWW_DIR/index.html" <<'EOF'
 <!doctype html>
 <html lang="ko">
@@ -34,9 +35,28 @@ if [[ ! -f "$WWW_DIR/index.html" ]]; then
 </html>
 EOF
   echo "Created placeholder $WWW_DIR/index.html"
+elif [[ -f "$WWW_DIR/index.html" ]] && grep -q "SmartCity WebGL placeholder" "$WWW_DIR/index.html" 2>/dev/null; then
+  echo "WARNING: www/index.html is still the placeholder — copy Unity WebGL build output here." >&2
 fi
 
 SERVER_BLOCK="$(sed "s|__REPO_ROOT__|$REPO_ROOT|g" "$NGINX_CONF_SRC")"
+
+MIME_TYPES=""
+for candidate in \
+  /opt/homebrew/etc/nginx/mime.types \
+  /usr/local/etc/nginx/mime.types \
+  /etc/nginx/mime.types; do
+  if [[ -f "$candidate" ]]; then
+    MIME_TYPES="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$MIME_TYPES" ]]; then
+  echo "mime.types not found. Install nginx: brew install nginx" >&2
+  exit 1
+fi
+
 cat > "$NGINX_CONF_GEN" <<EOF
 worker_processes 1;
 error_log /tmp/smartcity-nginx-error.log;
@@ -47,7 +67,7 @@ events {
 }
 
 http {
-    include       mime.types;
+    include       $MIME_TYPES;
     default_type  application/octet-stream;
     sendfile      on;
 

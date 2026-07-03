@@ -116,7 +116,6 @@ public class BakeTerrainHeightsWindow : EditorWindow
             Repaint();
             yield return null;
 
-            // BuildingManager의 public 래퍼를 통해 C++ DLL에서 건물 위치 취득
             double3[] positions = _buildingManager.GetBuildingPositionsForBaking(districtId);
 
             if (positions.Length == 0)
@@ -130,7 +129,6 @@ public class BakeTerrainHeightsWindow : EditorWindow
             _status = $"[{district}] Cesium 지형 높이 샘플링 중... ({positions.Length:N0}개 건물)";
             Repaint();
 
-            // Task → WaitUntil 패턴 (코루틴에서 async 결과 기다리기)
             var task = _terrainTileset.SampleHeightMostDetailed(positions);
             yield return new WaitUntil(() => task.IsCompleted);
 
@@ -139,7 +137,6 @@ public class BakeTerrainHeightsWindow : EditorWindow
             if (task.IsFaulted)
             {
                 Debug.LogError($"[TerrainBaker] {district} 샘플링 실패: {task.Exception?.GetBaseException().Message} — 해당 구는 높이 0으로 저장됩니다.");
-                // heights 배열이 이미 0으로 초기화되어 있으므로 그대로 저장
             }
             else
             {
@@ -150,7 +147,6 @@ public class BakeTerrainHeightsWindow : EditorWindow
                 }
             }
 
-            // float[] → byte[] 변환 후 파일 저장
             byte[] raw = new byte[heights.Length * sizeof(float)];
             Buffer.BlockCopy(heights, 0, raw, 0, raw.Length);
 
@@ -165,10 +161,9 @@ public class BakeTerrainHeightsWindow : EditorWindow
             _progress++;
             Repaint();
 
-            yield return null; // 다음 구로 넘어가기 전에 한 프레임 대기 (UI 갱신)
+            yield return null;
         }
 
-        // Resources 폴더 새로고침 (Unity가 새 .bytes 파일을 인식하도록)
         AssetDatabase.Refresh();
 
         _status = $"전체 완료! {_total}개 구 처리됨 — AssetDatabase 새로고침 완료";

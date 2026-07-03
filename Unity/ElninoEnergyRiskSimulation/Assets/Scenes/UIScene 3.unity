@@ -2846,6 +2846,271 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9117b6d975111c47b064a4373cc67ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1001 &360179007
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 103108500650921485, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: decalMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 129a4714f408e42a3bbd547c816a6f0a, type: 2}
+    - target: {fileID: 103108500650921485, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: minimapManager
+      value: 
+      objectReference: {fileID: 1966207135}
+    - target: {fileID: 103108500650921485, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: cesiumGeoreference
+      value: 
+      objectReference: {fileID: 916403143}
+    - target: {fileID: 678573333553768700, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: terrainTileset
+      value: 
+      objectReference: {fileID: 1173809030}
+    - target: {fileID: 678573333553768700, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: blackoutMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: f20c7ae9dbbd5dc4d80ce970fe9f5df8, type: 2}
+    - target: {fileID: 678573333553768700, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: cesiumGeoreference
+      value: 
+      objectReference: {fileID: 916403143}
+    - target: {fileID: 1108918767898206306, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1143553010424704365, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_Name
+      value: TestPrefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 1710315119800515962, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: uiController
+      value: 
+      objectReference: {fileID: 708179733}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: oniSlider
+      value: 
+      objectReference: {fileID: 1113106318}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: datePicker
+      value: 
+      objectReference: {fileID: 1379561657}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: oniNumText
+      value: 
+      objectReference: {fileID: 473750350}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: oniTypeText
+      value: 
+      objectReference: {fileID: 1882188360}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: oniSliderPanel
+      value: 
+      objectReference: {fileID: 2094717010}
+    - target: {fileID: 1970570418660836511, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: simulationStartButton
+      value: 
+      objectReference: {fileID: 454180060}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: minimapManager
+      value: 
+      objectReference: {fileID: 1966207135}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: terrainTileset
+      value: 
+      objectReference: {fileID: 1173809030}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: districtManager
+      value: 
+      objectReference: {fileID: 360179009}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: buildingMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 3ea5b46cfa5ee41d3aeb163cb7760735, type: 2}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: cesiumGeoreference
+      value: 
+      objectReference: {fileID: 916403143}
+    - target: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: simulationController
+      value: 
+      objectReference: {fileID: 1131763331}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 9401.609
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1749.8583
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 4594.3525
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4503288507644655149, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: terrainTileset
+      value: 
+      objectReference: {fileID: 1173809030}
+    - target: {fileID: 4503288507644655149, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: blackoutMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: f20c7ae9dbbd5dc4d80ce970fe9f5df8, type: 2}
+    - target: {fileID: 4503288507644655149, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: cesiumGeoreference
+      value: 
+      objectReference: {fileID: 916403143}
+    - target: {fileID: 5628084255731729884, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: oniChart
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5628084255731729884, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: titleText
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5628084255731729884, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: chartPanel
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5628084255731729884, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: uiController
+      value: 
+      objectReference: {fileID: 708179733}
+    - target: {fileID: 5628084255731729884, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: minimapManager
+      value: 
+      objectReference: {fileID: 1966207135}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: tooltipRoot
+      value: 
+      objectReference: {fileID: 814024126}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: tooltipText
+      value: 
+      objectReference: {fileID: 1784480302}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: districtRoot
+      value: 
+      objectReference: {fileID: 415192930}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: SelectedGuName
+      value: 
+      objectReference: {fileID: 407996373}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: districtLabelText
+      value: 
+      objectReference: {fileID: 336441358}
+    - target: {fileID: 6621556168656774471, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: simulationController
+      value: 
+      objectReference: {fileID: 1131763331}
+    - target: {fileID: 6712415921854460043, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: buildingManager
+      value: 
+      objectReference: {fileID: 360179008}
+    - target: {fileID: 6730944337062574733, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: dataManager
+      value: 
+      objectReference: {fileID: 1567278800}
+    - target: {fileID: 6730944337062574733, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: blackoutSimulationPanel
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 6730944337062574733, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: blackoutSimulationCanvasGroup
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7974240411382410331, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8626113785183535837, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8659827275220319299, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: dataManager
+      value: 
+      objectReference: {fileID: 1567278800}
+    - target: {fileID: 8659827275220319299, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: minimapManager
+      value: 
+      objectReference: {fileID: 1966207135}
+    - target: {fileID: 8659827275220319299, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      propertyPath: simulationController
+      value: 
+      objectReference: {fileID: 1131763331}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 7974240411382410331, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+    - {fileID: 4780921253663895104, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+    - {fileID: 2563397207717470007, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4180507456290223588, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1301005344}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8626113785183535837, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1966207136}
+  m_SourcePrefab: {fileID: 100100000, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+--- !u!114 &360179008 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2116474168996002242, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+  m_PrefabInstance: {fileID: 360179007}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4ae0dc313c1b214a89185f7ee6c3faf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::BuildingManager
+--- !u!114 &360179009 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6712415921854460043, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+  m_PrefabInstance: {fileID: 360179007}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61f5b4fa834388c419a6af70e5f1f252, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DistrictManager
+--- !u!1 &360179010 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8626113785183535837, guid: 811e02f6b40f5c64a9c5aee485c83582, type: 3}
+  m_PrefabInstance: {fileID: 360179007}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &360547721
 GameObject:
   m_ObjectHideFlags: 0
