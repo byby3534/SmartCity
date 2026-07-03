@@ -541,16 +541,19 @@ public class BuildingManager : MonoBehaviour
         if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices))
         {
             Debug.LogWarning($"[BuildingManager] '{DataConverter.GetDistrictName(districtType)}' 구의 정렬된 인덱스가 없습니다.");
+            simulationController.NotifyDistrictBlackoutComplete(districtType);
+            simulationController.NotifyDistrictRestoreStarted(districtType);
+            simulationController.NotifyDistrictRestoreComplete(districtType);
             return;
         }
 
         if (blackoutCoroutine != null)
             StopCoroutine(blackoutCoroutine);
 
-        blackoutCoroutine = StartCoroutine(BlackoutSequence(sortedIndices));
+        blackoutCoroutine = StartCoroutine(BlackoutSequence(districtType, sortedIndices));
     }
 
-    IEnumerator BlackoutSequence(int[] sortedIndices)
+    IEnumerator BlackoutSequence(DistrictType districtType, int[] sortedIndices)
     {
         // ── 1단계: 정전 ──
         for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
@@ -568,10 +571,13 @@ public class BuildingManager : MonoBehaviour
             yield return new WaitForSeconds(secondsBetweenBatch);
         }
 
+        simulationController.NotifyDistrictBlackoutComplete(districtType);
         Debug.Log($"[BuildingManager] 구역 정전 연출 완료 — {blackoutHoldDuration}초 유지 후 복전");
 
         // ── 2단계: 정전 유지 ──
         yield return new WaitForSeconds(blackoutHoldDuration);
+
+        simulationController.NotifyDistrictRestoreStarted(districtType);
 
         // ── 3단계: 복전 (배치 단위로 순차 복원) ──
         for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
@@ -589,11 +595,9 @@ public class BuildingManager : MonoBehaviour
             yield return new WaitForSeconds(secondsBetweenRestoreBatch);
         }
 
+        simulationController.NotifyDistrictRestoreComplete(districtType);
         Debug.Log("[BuildingManager] 구역 복전 완료 → 다음 구로 이동");
         blackoutCoroutine = null;
-
-        // 복전까지 끝났으므로 컨트롤러에 알려 다음 구로 진행시킨다.
-        simulationController.NotifyDistrictFinished();
     }
 
     private void ResetAllBlackoutStates()

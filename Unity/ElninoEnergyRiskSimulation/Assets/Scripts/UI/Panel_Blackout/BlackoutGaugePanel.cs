@@ -1,81 +1,57 @@
 using System.Collections;
-using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 
+/// <summary>
+/// 게이지 패널 시각화.
+/// - 니들: 예비율 → 각도
+/// - 강조 색: 니들 정지 시 예비율 단계, 애니메이션 중 니들 각도
+/// - 패널 텍스트(PowerStatusPanelUI): 동일 규칙 — 애니메이션 중 각도, 정지 시 예비율
+/// </summary>
 public class BlackoutGaugePanel : MonoBehaviour
 {
     [Header("참조")]
     [SerializeField] private DonutMeshRenderer[] segments = new DonutMeshRenderer[5];
     [SerializeField] private RectTransform needle;
     [SerializeField] private TMP_Text reserveRateLabel;
-    [SerializeField] private DataManager dataManager;
-    [SerializeField] private UIController uiController;
-    [SerializeField] private BlackoutSimulationController simulationController;
+    [SerializeField] private ReserveRateStateController stateController;
 
     [Header("동작")]
     [SerializeField] private float needleSmoothTime = 0.45f;
-    [SerializeField] private float simulationFullRecoveryRatio = 0.30f;
 
-    private static readonly float[] ReserveRateThresholds = ReserveRateStagePalette.Thresholds;
-    private static readonly float[] NeedleAngles = { 72f, 36f, 0f, -36f, -72f };
-
-    private const float NormalRangeUpper = 20f;
-    private const float SegmentHalfWidth = 18f;
     private const float InnerRadius = 40f;
     private const float OuterRadiusNormal = 90f;
     private const float OuterRadiusActive = 100f;
 
-    private int _currentLevel = -1;
     private float _targetAngle;
-    private float _lastReserveRate;
-    private float _simStartNeedleAngle;
     private float _needleAngularVelocity;
+    private int _settledLevel = -1;
+    private float _settledReserveRate;
 
-    private bool _simOn;
-    private bool _simCompleted;
-    private bool _naturalCompleteInProgress;
-    private float _seoulTotal;
-    private float _recoveredConsumption;
-    private bool _hasReceivedData;
-
-    private readonly List<OniRangeData> _oniRangeEntries = new();
     private Coroutine _needleCoroutine;
-    private Coroutine _completeCoroutine;
     private PowerStatusPanelUI _powerStatusPanel;
 
     private void Awake()
     {
-        if (dataManager == null)
-            dataManager = FindFirstObjectByType<DataManager>();
-        if (uiController == null)
-            uiController = FindFirstObjectByType<UIController>();
-        if (simulationController == null)
-            simulationController = FindFirstObjectByType<BlackoutSimulationController>();
+        SceneRefs.Resolve(ref stateController);
+        EnsurePowerStatusPanel();
     }
 
-    private void Start()
+    private void OnEnable()
     {
-        if (dataManager != null)
-        {
-            dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
-            dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
-            dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
-        }
+        SceneRefs.Resolve(ref stateController);
 
-        if (uiController != null)
-            uiController.OnOniValueChanged += HandleOniSliderChanged;
+        if (!SceneRefs.Require(this, stateController, nameof(stateController)))
+            return;
 
-        if (simulationController != null)
-        {
-            simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
-            simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
-            simulationController.OnSimulationCompleted += HandleSimCompleted;
-        }
+        stateController.OnStateChanged += HandleStateChanged;
+        HandleStateChanged(stateController.Current);
+    }
 
-        EnsurePowerStatusPanel();
-        ApplyDefaultReserveRate();
+    private void OnDisable()
+    {
+        if (stateController != null)
+            stateController.OnStateChanged -= HandleStateChanged;
     }
 
     private void EnsurePowerStatusPanel()
@@ -92,265 +68,33 @@ public class BlackoutGaugePanel : MonoBehaviour
             _powerStatusPanel = panel.gameObject.AddComponent<PowerStatusPanelUI>();
     }
 
-    private void OnEnable()
+    private void HandleStateChanged(ReserveRateSnapshot snapshot)
     {
-        if (!Application.isPlaying || _simOn)
-            return;
+        _settledReserveRate = snapshot.ReserveRate;
+        _settledLevel = snapshot.Level;
+        SetReserveRateLabel(snapshot.ReserveRate);
 
-        if (_hasReceivedData)
-            ApplyReserveRate(_lastReserveRate, instant: true);
+        if (snapshot.AnimateNeedle)
+            AnimateNeedleTo(snapshot.NeedleAngle);
         else
-            ApplyDefaultReserveRate();
+            SetNeedleInstant(snapshot.NeedleAngle, snapshot.Level);
     }
 
-    private void OnDestroy()
+    private void SetNeedleInstant(float angle, int level)
     {
-        if (dataManager != null)
-        {
-            dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
-            dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
-            dataManager.OnCurrentPowerUpdated -= HandleCurrentPowerUpdated;
-        }
-        if (uiController != null)
-            uiController.OnOniValueChanged -= HandleOniSliderChanged;
-
-        if (simulationController != null)
-        {
-            simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
-            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
-            simulationController.OnSimulationCompleted -= HandleSimCompleted;
-        }
-    }
-
-    private void HandlePowerDataUpdated(PowerGridData data)
-    {
-        if (data == null || _simOn)
-            return;
-
-        _hasReceivedData = true;
-        _lastReserveRate = data.reserveRate;
-        _seoulTotal = data.seoulTotalConsumption;
-        ApplyReserveRate(data.reserveRate, instant: true);
-    }
-
-    private void HandleCurrentPowerUpdated(JObject power)
-    {
-        if (_hasReceivedData || _simOn || power == null)
-            return;
-
-        if (power["suppReserveRate"] == null)
-            return;
-
-        if (float.TryParse(power["suppReserveRate"].ToString(), out float reserveRate))
-        {
-            _hasReceivedData = true;
-            _lastReserveRate = reserveRate;
-            _seoulTotal = 0f;
-
-            ApplyReserveRate(reserveRate, instant: true);
-        }
-    }
-
-    private void HandleOniRangeDataUpdated(List<OniRangeData> data)
-    {
-        if (data == null || data.Count == 0)
-        {
-            if (!_hasReceivedData)
-                ApplyDefaultReserveRate();
-            return;
-        }
-
-        _oniRangeEntries.Clear();
-        _oniRangeEntries.AddRange(data);
-
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
-        ApplyOniValue(oni, instant: !_hasReceivedData);
-    }
-
-    private void HandleOniSliderChanged(float oniValue)
-    {
-        if (_simOn) return;
-        ApplyOniValue(oniValue, instant: false);
-    }
-
-    private void ApplyOniValue(float oniValue, bool instant)
-    {
-        if (_oniRangeEntries.Count == 0) return;
-
-        OniRangeData entry = GetClosestOniEntry(oniValue);
-        if (entry == null) return;
-
-        _hasReceivedData = true;
-        _lastReserveRate = entry.reserveRate;
-        _seoulTotal = entry.seoulTotalConsumption;
-        ApplyReserveRate(entry.reserveRate, instant);
-    }
-
-    private void ApplyDefaultReserveRate()
-    {
-        if (_hasReceivedData || _simOn)
-            return;
-
-        _lastReserveRate = ReserveRateStagePalette.DefaultReserveRate;
-        _seoulTotal = 0f;
-        ApplyReserveRate(ReserveRateStagePalette.DefaultReserveRate, instant: true);
-    }
-
-    private OniRangeData GetClosestOniEntry(float oniValue)
-    {
-        OniRangeData closest = null;
-        float minDistance = float.MaxValue;
-
-        foreach (OniRangeData data in _oniRangeEntries)
-        {
-            float distance = Mathf.Abs(data.oni - oniValue);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = data;
-            }
-        }
-
-        return closest;
-    }
-
-    private void ApplyReserveRate(float reserveRate, bool instant)
-    {
-        reserveRate = Mathf.Max(0f, reserveRate);
-        int level = ReserveRateStagePalette.ToLevel(reserveRate);
-        float angle = ReserveRateToAngle(reserveRate);
-
-        bool needleUnchanged = !instant && !_simOn && level == _currentLevel
-            && Mathf.Abs(angle - _targetAngle) < 0.05f;
-
-        _currentLevel = level;
+        StopNeedleAnimation();
         _targetAngle = angle;
-
-        if (_currentLevel < 4 && _simOn && simulationController != null)
-            simulationController.RequestToggle(false);
-
-        if (!_simOn)
-        {
-            SetReserveRateLabel(reserveRate);
-            _powerStatusPanel?.ApplyReserveRate(reserveRate);
-
-            if (needleUnchanged)
-                UpdateSegmentsForNeedle(angle, _currentLevel);
-            else
-                MoveNeedleTo(angle, instant);
-        }
+        SetNeedleAngle(angle);
+        ApplySettledVisuals(level);
     }
 
-    private void HandleSimToggled(bool isOn)
+    private void AnimateNeedleTo(float targetAngle)
     {
-        _simOn = isOn;
+        _targetAngle = targetAngle;
 
-        if (isOn)
-        {
-            _recoveredConsumption = 0f;
-            _simCompleted = false;
-            _naturalCompleteInProgress = false;
-            _simStartNeedleAngle = ReserveRateToAngle(_lastReserveRate);
-            SetReserveRateLabel(_lastReserveRate);
-        }
-        else if (!_naturalCompleteInProgress && !_simCompleted)
-        {
-            SetReserveRateLabel(_lastReserveRate);
-            RestoreNeedleFromLiveData(instant: false);
-        }
-    }
-
-    private void HandleDistrictBlackedOut(DistrictType districtType, double consumption)
-    {
-        if (!_simOn || _seoulTotal <= 0f) return;
-
-        _recoveredConsumption += (float)consumption;
-        float recoveryRatio = Mathf.Clamp01(
-            _recoveredConsumption / (_seoulTotal * simulationFullRecoveryRatio));
-
-        float targetAngle = Mathf.Lerp(_simStartNeedleAngle, SegmentStart(0), recoveryRatio);
-        ApplySimulationRecoveryVisuals(recoveryRatio, targetAngle);
-        MoveNeedleTo(targetAngle, instant: false);
-    }
-
-    private void ApplySimulationRecoveryVisuals(float recoveryRatio, float targetAngle)
-    {
-        int recoveryLevel = AngleToLevel(targetAngle);
-        _currentLevel = recoveryLevel;
-
-        float displayRate = Mathf.Lerp(
-            _lastReserveRate, ReserveRateStagePalette.Thresholds[0], recoveryRatio);
-        SetReserveRateLabel(displayRate);
-        _powerStatusPanel?.ApplyReserveRate(displayRate, force: true);
-    }
-
-    private void HandleSimCompleted()
-    {
-        _simOn = false;
-        _naturalCompleteInProgress = true;
-
-        if (_completeCoroutine != null)
-            StopCoroutine(_completeCoroutine);
-        _completeCoroutine = StartCoroutine(CompleteSequence());
-    }
-
-    private IEnumerator CompleteSequence()
-    {
-        _simCompleted = true;
-
-        yield return new WaitForSeconds(2f);
-
-        RestoreNeedleFromLiveData(instant: false);
-
-        yield return new WaitForSeconds(1f);
-
-        _simCompleted = false;
-        _naturalCompleteInProgress = false;
-        _simOn = false;
-        SetReserveRateLabel(_lastReserveRate);
-
-        _completeCoroutine = null;
-    }
-
-    private void RestoreNeedleFromLiveData(bool instant)
-    {
-        MoveNeedleTo(ReserveRateToAngle(_lastReserveRate), instant);
-    }
-
-    private void MoveNeedleTo(float angle, bool instant)
-    {
-        _targetAngle = angle;
-
-        if (instant)
-        {
-            StopNeedleAnimation();
-            SetNeedleAngle(angle);
-            int level = _simOn ? AngleToLevel(angle) : _currentLevel;
-            if (_simOn)
-                _currentLevel = level;
-            UpdateSegmentsForNeedle(angle, level);
-        }
-        else
-        {
-            AnimateNeedleTo(angle);
-        }
-    }
-
-    private void AnimateNeedleTo(float target)
-    {
         if (_needleCoroutine != null)
             StopCoroutine(_needleCoroutine);
-        _needleCoroutine = StartCoroutine(AnimateNeedleCoroutine(target));
-    }
-
-    private void StopNeedleAnimation()
-    {
-        if (_needleCoroutine != null)
-        {
-            StopCoroutine(_needleCoroutine);
-            _needleCoroutine = null;
-        }
-        _needleAngularVelocity = 0f;
+        _needleCoroutine = StartCoroutine(AnimateNeedleCoroutine(targetAngle));
     }
 
     private IEnumerator AnimateNeedleCoroutine(float target)
@@ -362,26 +106,34 @@ public class BlackoutGaugePanel : MonoBehaviour
                 cur, target, ref _needleAngularVelocity, needleSmoothTime, Mathf.Infinity, Time.deltaTime);
 
             SetNeedleAngle(next);
-            UpdateSegmentsForNeedle(next);
+            ApplyAnimatedVisuals(next);
 
             if (Mathf.Abs(NormalizeAngle(next - target)) < 0.05f)
-            {
-                SetNeedleAngle(target);
-                int levelAtTarget = AngleToLevel(target);
-                _currentLevel = levelAtTarget;
-                UpdateSegmentsForNeedle(target, levelAtTarget);
-                _needleCoroutine = null;
-                yield break;
-            }
+                break;
 
             yield return null;
         }
+
+        SetNeedleAngle(target);
+        _needleCoroutine = null;
+        ApplySettledVisuals(_settledLevel);
     }
 
-    private void UpdateSegmentsForNeedle(float angle, int? forcedLevel = null)
+    private void ApplyAnimatedVisuals(float angle)
     {
-        int activeLevel = forcedLevel ?? AngleToLevel(angle);
+        int level = ReserveRateGaugeMath.AngleToLevel(angle);
+        UpdateSegments(level);
+        _powerStatusPanel?.ApplyLevel(level);
+    }
 
+    private void ApplySettledVisuals(int level)
+    {
+        UpdateSegments(level);
+        _powerStatusPanel?.ApplyLevel(level);
+    }
+
+    private void UpdateSegments(int activeLevel)
+    {
         for (int i = 0; i < segments.Length; i++)
         {
             if (segments[i] == null) continue;
@@ -392,47 +144,15 @@ public class BlackoutGaugePanel : MonoBehaviour
         }
     }
 
-    private static float ReserveRateToAngle(float reserveRate)
+    private void StopNeedleAnimation()
     {
-        float normalLower = ReserveRateThresholds[0];
-
-        if (reserveRate >= NormalRangeUpper)
-            return SegmentStart(0);
-
-        if (reserveRate >= normalLower)
+        if (_needleCoroutine != null)
         {
-            float t = Mathf.InverseLerp(normalLower, NormalRangeUpper, reserveRate);
-            return Mathf.Lerp(SegmentEnd(0), SegmentStart(0), t);
+            StopCoroutine(_needleCoroutine);
+            _needleCoroutine = null;
         }
-
-        for (int i = 0; i < 4; i++)
-        {
-            float upper = ReserveRateThresholds[i];
-            float lower = ReserveRateThresholds[i + 1];
-            if (reserveRate >= lower)
-            {
-                int seg = i + 1;
-                float t = Mathf.InverseLerp(lower, upper, reserveRate);
-                return Mathf.Lerp(SegmentEnd(seg), SegmentStart(seg), t);
-            }
-        }
-
-        float tCritical = Mathf.InverseLerp(ReserveRateThresholds[4], ReserveRateThresholds[3], reserveRate);
-        return Mathf.Lerp(SegmentEnd(4), SegmentStart(4), tCritical);
+        _needleAngularVelocity = 0f;
     }
-
-    private static int AngleToLevel(float angle)
-    {
-        angle = NormalizeAngle(angle);
-        if (angle >= SegmentEnd(0)) return 0;
-        if (angle >= SegmentEnd(1)) return 1;
-        if (angle >= SegmentEnd(2)) return 2;
-        if (angle >= SegmentEnd(3)) return 3;
-        return 4;
-    }
-
-    private static float SegmentStart(int level) => NeedleAngles[level] + SegmentHalfWidth;
-    private static float SegmentEnd(int level) => NeedleAngles[level] - SegmentHalfWidth;
 
     private void SetNeedleAngle(float angle)
     {

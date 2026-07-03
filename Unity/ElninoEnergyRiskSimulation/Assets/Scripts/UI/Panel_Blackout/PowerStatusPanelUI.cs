@@ -16,7 +16,6 @@ public class PowerStatusPanelUI : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
-        ApplyReserveRate(ReserveRateStagePalette.DefaultReserveRate, force: true);
     }
 
     public void ApplyReserveRate(float reserveRate, bool force = false)
@@ -24,24 +23,13 @@ public class PowerStatusPanelUI : MonoBehaviour
         ApplyLevel(ReserveRateStagePalette.ToLevel(reserveRate), force);
     }
 
-    private void ResolveReferences()
-    {
-        Transform powerValue = transform.Find("Panel_PowerValue");
-
-        if (stageTitleText == null && powerValue != null)
-            stageTitleText = powerValue.Find("Text_PowerStatus")?.GetComponent<TMP_Text>();
-
-        if (statusDot == null && powerValue != null)
-            statusDot = powerValue.Find("Dot")?.GetComponent<DonutMeshRenderer>();
-
-        if (stageDescriptionText == null)
-            stageDescriptionText = transform.Find("Text_Contents")?.GetComponent<TMP_Text>();
-    }
-
-    private void ApplyLevel(int level, bool force = false)
+    public void ApplyLevel(int level, bool force = false)
     {
         if (!force && level == _currentLevel)
             return;
+
+        if (stageTitleText == null || stageDescriptionText == null || statusDot == null)
+            ResolveReferences();
 
         _currentLevel = level;
         Color color = ReserveRateStagePalette.GetSegmentColor(level);
@@ -57,5 +45,19 @@ public class PowerStatusPanelUI : MonoBehaviour
 
         if (statusDot != null)
             statusDot.ApplyDisplayColor(color);
+    }
+
+    private void ResolveReferences()
+    {
+        Transform powerValue = transform.Find("Panel_PowerValue");
+
+        if (stageTitleText == null && powerValue != null)
+            stageTitleText = powerValue.Find("Text_PowerStatus")?.GetComponent<TMP_Text>();
+
+        if (statusDot == null && powerValue != null)
+            statusDot = powerValue.Find("Dot")?.GetComponent<DonutMeshRenderer>();
+
+        if (stageDescriptionText == null)
+            stageDescriptionText = transform.Find("Text_Contents")?.GetComponent<TMP_Text>();
     }
 }

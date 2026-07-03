@@ -19,48 +19,39 @@ public class InfoPanelUI : MonoBehaviour
     [SerializeField] private DataManager dataManager;
     [SerializeField] private UIController uiController;
     [SerializeField] private MinimapManager minimapManager;
-    [SerializeField] private BlackoutSimulationController simulationController;
-
-    [Header("시뮬레이션 회복")]
-    [SerializeField] private float simulationFullRecoveryRatio = 0.30f;
+    [SerializeField] private ReserveRateStateController reserveRateState;
 
     private bool _hasPredictContext;
-    private PowerGridData _latestPowerData;
     private readonly List<OniRangeData> _oniRangeEntries = new();
     private readonly Dictionary<DistrictType, float> _districtTemperatures = new();
     private DistrictType _selectedDistrict = DistrictType.JONGNO;
     private string cachedTemperatureText;
     private string cachedEmergencyStage;
     private int _currentStageLevel = -1;
-    private bool _simOn;
-    private float _recoveredConsumption;
-    private float _simStartReserveRate;
-
-    private float _currentReserveRate = ReserveRateStagePalette.DefaultReserveRate;
 
     private void Awake()
     {
         SceneRefs.Resolve(ref dataManager);
         SceneRefs.Resolve(ref uiController);
         SceneRefs.Resolve(ref minimapManager);
-        SceneRefs.Resolve(ref simulationController);
+        SceneRefs.Resolve(ref reserveRateState);
 
         ResolveReferences();
-        ApplyReserveStage(_currentReserveRate, force: true);
         RefreshRealtimeDateDisplay();
     }
 
     private void OnEnable()
     {
+        SceneRefs.Resolve(ref reserveRateState);
+
         if (!SceneRefs.RequireAll(this,
                 (dataManager, nameof(dataManager)),
                 (uiController, nameof(uiController)),
                 (minimapManager, nameof(minimapManager)),
-                (simulationController, nameof(simulationController))))
+                (reserveRateState, nameof(reserveRateState))))
             return;
 
         dataManager.OnCurrentTempDataUpdated += HandleCurrentTempUpdated;
-        dataManager.OnCurrentPowerUpdated += HandleCurrentPowerUpdated;
         dataManager.OnPowerDataUpdated += HandlePowerDataUpdated;
         dataManager.OnDistrictDataUpdated += HandleDistrictDataUpdated;
         dataManager.OniRangeDataUpdated += HandleOniRangeDataUpdated;
@@ -69,9 +60,8 @@ public class InfoPanelUI : MonoBehaviour
 
         minimapManager.OnDistrictSelected += HandleDistrictSelected;
 
-        simulationController.OnBlackoutSimulationToggled += HandleSimToggled;
-        simulationController.OnDistrictBlackedOut += HandleDistrictBlackedOut;
-        simulationController.OnSimulationCompleted += HandleSimCompleted;
+        reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
+        HandleReserveRateStateChanged(reserveRateState.Current);
     }
 
     private void OnDisable()
@@ -79,7 +69,6 @@ public class InfoPanelUI : MonoBehaviour
         if (dataManager != null)
         {
             dataManager.OnCurrentTempDataUpdated -= HandleCurrentTempUpdated;
-            dataManager.OnCurrentPowerUpdated -= HandleCurrentPowerUpdated;
             dataManager.OnPowerDataUpdated -= HandlePowerDataUpdated;
             dataManager.OnDistrictDataUpdated -= HandleDistrictDataUpdated;
             dataManager.OniRangeDataUpdated -= HandleOniRangeDataUpdated;
@@ -91,12 +80,13 @@ public class InfoPanelUI : MonoBehaviour
         if (minimapManager != null)
             minimapManager.OnDistrictSelected -= HandleDistrictSelected;
 
-        if (simulationController != null)
-        {
-            simulationController.OnBlackoutSimulationToggled -= HandleSimToggled;
-            simulationController.OnDistrictBlackedOut -= HandleDistrictBlackedOut;
-            simulationController.OnSimulationCompleted -= HandleSimCompleted;
-        }
+        if (reserveRateState != null)
+            reserveRateState.OnStateChanged -= HandleReserveRateStateChanged;
+    }
+
+    private void HandleReserveRateStateChanged(ReserveRateSnapshot snapshot)
+    {
+        ApplyReserveStage(snapshot.ReserveRate, force: true);
     }
 
     private void HandleCurrentTempUpdated(JObject weather)
@@ -113,35 +103,18 @@ public class InfoPanelUI : MonoBehaviour
             SetRealtimeTemperature(temperature);
     }
 
-    private void HandleCurrentPowerUpdated(JObject power)
-    {
-        if (_hasPredictContext || power == null)
-            return;
-
-        if (power["suppReserveRate"] == null)
-            return;
-
-        if (float.TryParse(power["suppReserveRate"].ToString(), out float reserveRate))
-        {
-            _currentReserveRate = reserveRate;
-            ApplyReserveStage(_currentReserveRate, force: true);
-        }
-    }
-
     private void HandlePowerDataUpdated(PowerGridData data)
     {
         if (data == null)
             return;
 
         _hasPredictContext = true;
-        _latestPowerData = data;
         _selectedDistrict = DistrictType.JONGNO;
         _districtTemperatures.Clear();
 
         if (Text_Date_Info != null)
             Text_Date_Info.text = $"{data.year}년 {data.month}월";
 
-        ApplyReserveStage(data.reserveRate, force: true);
         RefreshSimulationTemperatureDisplay();
     }
 
@@ -150,30 +123,18 @@ public class InfoPanelUI : MonoBehaviour
         _oniRangeEntries.Clear();
 
         if (data == null || data.Count == 0)
-        {
-            if (!_hasPredictContext)
-                ApplyReserveStage(ReserveRateStagePalette.DefaultReserveRate);
             return;
-        }
 
         _oniRangeEntries.AddRange(data);
 
-        float oni = uiController.GetCurrentOni();
-        ApplyReserveStage(GetClosestOniEntry(oni)?.reserveRate ?? ReserveRateStagePalette.DefaultReserveRate);
-
         if (_hasPredictContext)
-            RefreshSimulationTemperatureFromOniRange(oni);
+            RefreshSimulationTemperatureFromOniRange(uiController.GetCurrentOni());
     }
 
     private void HandleOniValueChanged(float oniValue)
     {
-        if (_simOn)
-            return;
-
         if (_oniRangeEntries.Count == 0)
             return;
-
-        ApplyReserveStage(GetClosestOniEntry(oniValue)?.reserveRate ?? ReserveRateStagePalette.DefaultReserveRate);
 
         if (_hasPredictContext)
             RefreshSimulationTemperatureFromOniRange(oniValue);
@@ -197,43 +158,6 @@ public class InfoPanelUI : MonoBehaviour
 
         if (data.districtType == _selectedDistrict)
             SetSimulationTemperature(data.districtType, data.temperature);
-    }
-
-    private void HandleSimToggled(bool isOn)
-    {
-        _simOn = isOn;
-
-        if (isOn)
-        {
-            _recoveredConsumption = 0f;
-            _simStartReserveRate = _latestPowerData?.reserveRate
-                ?? ReserveRateStagePalette.DefaultReserveRate;
-        }
-        else
-        {
-            float reserveRate = _latestPowerData?.reserveRate
-                ?? ReserveRateStagePalette.DefaultReserveRate;
-            ApplyReserveStage(reserveRate, force: true);
-        }
-    }
-
-    private void HandleDistrictBlackedOut(DistrictType districtType, double consumption)
-    {
-        if (!_simOn || _latestPowerData == null || _latestPowerData.seoulTotalConsumption <= 0f)
-            return;
-
-        _recoveredConsumption += (float)consumption;
-        float recoveryRatio = Mathf.Clamp01(
-            _recoveredConsumption / (_latestPowerData.seoulTotalConsumption * simulationFullRecoveryRatio));
-
-        float displayRate = Mathf.Lerp(
-            _simStartReserveRate, ReserveRateStagePalette.Thresholds[0], recoveryRatio);
-        ApplyReserveStage(displayRate, force: true);
-    }
-
-    private void HandleSimCompleted()
-    {
-        _simOn = false;
     }
 
     private void ApplyReserveStage(float reserveRate, bool force = false)
