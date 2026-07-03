@@ -37,11 +37,17 @@ public class MinimapManager : MonoBehaviour
 
     // 클릭 구 이름
     [Header("SelectedGuName")]
+    [SerializeField] private TMP_Text districtLabelText;
     [SerializeField] private TMP_Text SelectedGuName;
+
+    [SerializeField] private BlackoutSimulationController simulationController;
 
     // 초기 선택 구
     [Header("initialDistrict")]
     [SerializeField] private DistrictType initialDistrict = DistrictType.JONGNO;
+
+    private const string LabelClickedDistrict = "선택한 구역";
+    private const string LabelSimDistrict = "순환 단전 구역";
 
 
     // 구 이름, 구 폴리곤 딕셔너리
@@ -55,8 +61,12 @@ public class MinimapManager : MonoBehaviour
     // 구 이름, 최대최소 좌표 딕셔너리
     private Dictionary<DistrictType, Vector4> districtPolygonLonLatMap = new Dictionary<DistrictType, Vector4>();
 
-    // 현재 선택된 구 이름
+    // 현재 선택된 구 (클릭)
     private DistrictType selectedDistrictType;
+
+    private DistrictType _simDistrict = DistrictType.None;
+    private bool _isSimulationOn;
+    private bool _userSelectedDuringSim;
 
     // 서울 전체 최소/최대 경위도
     private double minLon = double.MaxValue;
@@ -74,10 +84,30 @@ public class MinimapManager : MonoBehaviour
 
     // 구 선택 이벤트
     public event Action<DistrictType> OnDistrictSelected;
+    public event Action<DistrictType> OnDisplayedDistrictChanged;
+
+    public DistrictType DisplayedDistrict { get; private set; }
 
     private void Awake()
     {
         SceneRefs.Resolve(ref mainCameraController);
+        SceneRefs.Resolve(ref simulationController);
+    }
+
+    private void OnEnable()
+    {
+        if (simulationController == null) return;
+
+        simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
+        simulationController.OnBlackoutDistrictChanged += HandleBlackoutDistrictChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (simulationController == null) return;
+
+        simulationController.OnBlackoutSimulationToggled -= HandleSimulationToggled;
+        simulationController.OnBlackoutDistrictChanged -= HandleBlackoutDistrictChanged;
     }
 
     private void Start()
@@ -98,6 +128,47 @@ public class MinimapManager : MonoBehaviour
         GetComponent<MinimapColorController>()?.SetReady();
 
         SetupTooltip();
+
+        selectedDistrictType = initialDistrict;
+        UpdateSelectedDistrictDisplay();
+    }
+
+    private void HandleSimulationToggled(bool isOn)
+    {
+        _isSimulationOn = isOn;
+        _userSelectedDuringSim = false;
+
+        if (!isOn)
+        {
+            _simDistrict = DistrictType.None;
+            UpdateSelectedDistrictDisplay();
+        }
+    }
+
+    private void HandleBlackoutDistrictChanged(DistrictType districtType)
+    {
+        _simDistrict = districtType;
+
+        if (_isSimulationOn && !_userSelectedDuringSim)
+            UpdateSelectedDistrictDisplay();
+    }
+
+    private void UpdateSelectedDistrictDisplay()
+    {
+        bool showSimDistrict = _isSimulationOn && !_userSelectedDuringSim;
+        DistrictType displayDistrict = showSimDistrict ? _simDistrict : selectedDistrictType;
+
+        if (districtLabelText != null)
+            districtLabelText.text = showSimDistrict ? LabelSimDistrict : LabelClickedDistrict;
+
+        if (SelectedGuName != null)
+            SelectedGuName.text = DataConverter.GetDistrictName(displayDistrict);
+
+        if (displayDistrict == DisplayedDistrict)
+            return;
+
+        DisplayedDistrict = displayDistrict;
+        OnDisplayedDistrictChanged?.Invoke(DisplayedDistrict);
     }
 
     // Tooltip 설정
@@ -469,10 +540,11 @@ public class MinimapManager : MonoBehaviour
 
         Debug.Log("[MinimapManager] 클릭한 구: " + DataConverter.GetDistrictName(polygon.districtType));
 
-        // 구 선택 이벤트 발생
-        OnDistrictSelected?.Invoke(polygon.districtType);
+        if (_isSimulationOn)
+            _userSelectedDuringSim = true;
 
-        SelectedGuName.text = DataConverter.GetDistrictName(polygon.districtType);
+        OnDistrictSelected?.Invoke(polygon.districtType);
+        UpdateSelectedDistrictDisplay();
     }
 
     // 구 색상 설정

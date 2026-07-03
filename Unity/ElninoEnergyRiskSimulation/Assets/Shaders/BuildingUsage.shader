@@ -3,10 +3,13 @@ Shader "SmartCity/BuildingUsage"
     Properties
     {
         [Header(Heatmap Colors)]
-        _SafeColor   ("Safe Color (Low)",   Color) = (0.0, 0.5, 1.0, 1.0)
-        _DangerColor ("Danger Color (High)", Color) = (1.0, 0.1, 0.1, 1.0)
-        _ColorMin    ("Color Range Min",    Range(0, 1)) = 0.0
-        _ColorMax    ("Color Range Max",    Range(0, 1)) = 1.0
+        _ZeroColor    ("Zero Score Color",        Color) = (0.0, 0.5, 1.0, 1.0)
+        _DefaultColor ("Default Color (No API)",  Color) = (1.0, 1.0, 1.0, 1.0)
+        _SafeColor    ("Safe Color (Low)",         Color) = (0.0, 0.5, 1.0, 1.0)
+        _DangerColor  ("Danger Color (High)",      Color) = (1.0, 0.1, 0.1, 1.0)
+        _ColorMin     ("Color Range Min",          Range(0, 1)) = 0.0
+        _ColorMax     ("Color Range Max",          Range(0, 1)) = 1.0
+        _ApiLoaded    ("API Loaded",               Float) = 0.0
 
         [Header(Blackout)]
         _BlackoutColor("Blackout Color",      Color) = (0.02, 0.02, 0.02, 1.0)
@@ -51,10 +54,13 @@ Shader "SmartCity/BuildingUsage"
             CBUFFER_START(UnityPerMaterial)
                 float4 _SafeColor;
                 float4 _DangerColor;
+                float4 _ZeroColor;
+                float4 _DefaultColor;
                 float4 _BlackoutColor;
                 float  _AmbientStrength;
                 float  _ColorMin;
                 float  _ColorMax;
+                float  _ApiLoaded;
             CBUFFER_END
 
             struct Attributes
@@ -99,14 +105,26 @@ Shader "SmartCity/BuildingUsage"
 
                 // ── 1. 블랙아웃 처리 ──
                 if (data.isBlackout == 1)
-                {
                     return half4(_BlackoutColor.rgb, 1.0);
+
+                float3 baseColor;
+
+                // ── 2. API 로드 전 → 흰색 ──
+                if (_ApiLoaded < 0.5)
+                {
+                    baseColor = _DefaultColor.rgb;
+                }
+                // ── 3. API 로드 후 ──
+                else if (data.reductionValue <= 0.0)
+                {
+                    baseColor = _ZeroColor.rgb;  // 점수 없는 건물 → 파란색
+                }
+                else
+                {
+                    baseColor = EvaluateHeatmap(data.reductionValue);  // 컬러맵
                 }
 
-                // ── 2. 수요감축 필요도 히트맵 색상 ──
-                float3 baseColor = EvaluateHeatmap(data.reductionValue);
-
-                // ── 3. 기본 디퓨즈 라이팅 ──
+                // ── 4. 기본 디퓨즈 라이팅 ──
                 Light mainLight = GetMainLight();
                 float3 normal   = normalize(input.normalWS);
                 float  ndotl    = saturate(dot(normal, mainLight.direction));
