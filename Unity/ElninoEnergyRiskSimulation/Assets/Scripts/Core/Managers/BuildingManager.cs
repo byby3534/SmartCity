@@ -48,7 +48,8 @@ public class BuildingManager : MonoBehaviour
     public Cesium3DTileset terrainTileset;
     public CesiumGeoreference cesiumGeoreference;
     public Material buildingMaterial;
-    private ComputeBuffer renderBuffer;
+    // private ComputeBuffer renderBuffer;
+    private Texture2D renderTexture;
 
     private BuildingRenderData[] cachedRenderData;
     private bool bufferDirty;
@@ -420,19 +421,41 @@ public class BuildingManager : MonoBehaviour
     /// 렌더링 전용 ComputeBuffer 초기화.
     /// C++의 renderingBuffer로부터 데이터를 읽어 GPU에 업로드한다.
     /// </summary>
+    private const int TexWidth = 16384;
+    private int _texHeight;
+
     private void InitializeRenderBuffer()
     {
         int count = GetRenderingBufferCount();
         if (count == 0) return;
 
-        int stride = Marshal.SizeOf(typeof(BuildingRenderData));
-        renderBuffer = new ComputeBuffer(count, stride);
-
         SyncRenderCacheFromNative();
-        renderBuffer.SetData(cachedRenderData);
-        buildingMaterial.SetBuffer("_BuildingRenderBuffer", renderBuffer);
 
-        Debug.Log($"[CityManager] 렌더링 버퍼 초기화 완료 ({count}개, {stride}바이트/건물)");
+        _texHeight = Mathf.CeilToInt((float)count / TexWidth);
+        renderTexture = new Texture2D(TexWidth, _texHeight, TextureFormat.RGFloat, false);
+        renderTexture.filterMode = FilterMode.Point;
+        buildingMaterial.SetTexture("_BuildingDataTex", renderTexture);
+        buildingMaterial.SetFloat("_BuildingDataTexWidth", TexWidth);
+        buildingMaterial.SetFloat("_BuildingDataTexHeight", _texHeight);
+
+        UploadToTexture();
+
+        Debug.Log($"[CityManager] 렌더링 버퍼 초기화 완료 ({count}개 건물, {TexWidth}x{_texHeight} 텍스처)");
+    }
+
+    private void UploadToTexture()
+    {
+        if (renderTexture == null || cachedRenderData == null) return;
+
+        int total = TexWidth * _texHeight;
+        Color[] pixels = new Color[total];
+        for (int i = 0; i < cachedRenderData.Length; i++)
+        {
+            pixels[i] = new Color(cachedRenderData[i].reductionValue,
+                                  cachedRenderData[i].isBlackout, 0, 0);
+        }
+        renderTexture.SetPixels(pixels);
+        renderTexture.Apply();
     }
 
     /// <summary>
@@ -456,10 +479,10 @@ public class BuildingManager : MonoBehaviour
 
     public void FlushBufferToGPU()
     {
-        if (!bufferDirty || cachedRenderData == null || renderBuffer == null)
+        if (!bufferDirty || cachedRenderData == null || renderTexture == null)
             return;
 
-        renderBuffer.SetData(cachedRenderData);
+        UploadToTexture();
         bufferDirty = false;
 
         if (!_apiLoaded)
@@ -644,9 +667,9 @@ public class BuildingManager : MonoBehaviour
 
     void OnDestroy()
     {
-        if (renderBuffer != null)
+        if (renderTexture != null)
         {
-            renderBuffer.Release();
+            Destroy(renderTexture);
         }
     }
 }
