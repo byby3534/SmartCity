@@ -66,7 +66,7 @@ public class MainCameraController : MonoBehaviour
             }
             else
             {
-                Debug.LogError("[MainCameraController] MainCamera에 CesiumGlobeAnchor와 CesiumCameraController가 없습니다.");
+                Debug.LogError("[MainCameraController] MainCamera에 Cesium 설정 문제 발생했습니다. Cesium 컴포넌트 부착 확인해주세요.");
             }
         }
     }

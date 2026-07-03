@@ -128,14 +128,30 @@ public class DataManager : MonoBehaviour
         {
             if (data == null)
             {
-                Debug.LogError("Current Power API 응답 Null");
+                Debug.LogWarning("[DataManager] Current Power API 응답 Null → 기본 공급예비율 사용");
+
+                JObject defaultPower = new JObject
+                {
+                    ["baseDatetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ["suppReserveRate"] = ReserveRateStagePalette.DefaultReserveRate
+                };
+
+                OnCurrentPowerUpdated?.Invoke(defaultPower);
                 return;
             }
 
             JObject power = data["power"] as JObject;
 
             if (power == null)
-                return;
+            {
+                Debug.LogWarning("[DataManager] Current Power 데이터 없음 → 기본 공급예비율 사용");
+
+                power = new JObject
+                {
+                    ["baseDatetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ["suppReserveRate"] = ReserveRateStagePalette.DefaultReserveRate
+                };
+            }
 
             OnCurrentPowerUpdated?.Invoke(power);
         });
