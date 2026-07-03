@@ -2262,7 +2262,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -20}
-  m_SizeDelta: {x: 80, y: 20}
+  m_SizeDelta: {x: 100, y: 20}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &336441358
 MonoBehaviour:
@@ -15092,7 +15092,7 @@ MonoBehaviour:
   districtManager: {fileID: 6712415922071033268}
   simulationController: {fileID: 6730944337254637490}
   minimapManager: {fileID: 6621556168309506168}
-  mainCameraController: {fileID: 0}
+  mainCameraController: {fileID: 1394554680}
   buildingsPerBatch: 100
   secondsBetweenBatch: 0.05
   blackoutHoldDuration: 3

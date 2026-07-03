@@ -138,9 +138,17 @@ public class MinimapManager : MonoBehaviour
         _isSimulationOn = isOn;
         _userSelectedDuringSim = false;
 
-        if (!isOn)
+        if (isOn)
         {
-            _simDistrict = DistrictType.None;
+            ResetSelectedDistrictOutline();
+        }
+        else
+        {
+            if (_simDistrict != DistrictType.None)
+            {
+                selectedDistrictType = _simDistrict;
+            }
+
             UpdateSelectedDistrictDisplay();
         }
     }
@@ -169,6 +177,37 @@ public class MinimapManager : MonoBehaviour
 
         DisplayedDistrict = displayDistrict;
         OnDisplayedDistrictChanged?.Invoke(DisplayedDistrict);
+    }
+
+    private void ResetSelectedDistrictOutline()
+    {
+        if (selectedDistrictType == DistrictType.None) return;
+
+        if (!districtOutlineMap.TryGetValue(selectedDistrictType, out List<MinimapOutline> previousOutlines))
+            return;
+
+        foreach (MinimapOutline outline in previousOutlines)
+        {
+            if (outline == null) continue;
+
+            outline.lineWidth = outlineWidth;
+            outline.SetOutlineColor(nonSelectedOutlineColor);
+        }
+    }
+
+    private void RestoreSelectedDistrictOutline()
+    {
+        if (selectedDistrictType == DistrictType.None) return;
+
+        if (!districtOutlineMap.TryGetValue(selectedDistrictType, out List<MinimapOutline> selectedOutlines))
+            return;
+
+        foreach (MinimapOutline outline in selectedOutlines)
+        {
+            if (outline == null) continue;
+
+            outline.SetOutlineColor(selectedOutlineColor);
+        }
     }
 
     // Tooltip 설정
@@ -502,6 +541,13 @@ public class MinimapManager : MonoBehaviour
     public void SelectDistrict(MinimapPolygon polygon)
     {
         if (polygon == null) return;
+
+        // 시뮬레이션 중일 때 구 클릭 무시
+        if (_isSimulationOn)
+        {
+            Debug.Log("[MinimapManager] 시뮬레이션 중이므로 구 클릭이 비활성화되어 있습니다.");
+            return;
+        }
 
         // 현재 구 상태 변경 전 이전 선택 구 상태 변경
         // : 이전 선택된 구 아웃라인 -> 원래 색으로
