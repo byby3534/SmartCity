@@ -22,7 +22,6 @@ public class InfoPanelUI : MonoBehaviour
     [SerializeField] private UIController uiController;
     [SerializeField] private MinimapManager minimapManager;
     [SerializeField] private ReserveRateStateController reserveRateState;
-
     private bool _hasPredictContext;
     private readonly List<OniRangeData> _oniRangeEntries = new();
     private readonly Dictionary<DistrictType, float> _districtTemperatures = new();
@@ -71,7 +70,8 @@ public class InfoPanelUI : MonoBehaviour
 
         uiController.OnOniValueChanged += HandleOniValueChanged;
 
-        minimapManager.OnDistrictSelected += HandleDistrictSelected;
+        // 변경
+        minimapManager.OnDisplayedDistrictChanged += HandleDisplayedDistrictChanged;
 
         reserveRateState.OnStateChanged += HandleReserveRateStateChanged;
         HandleReserveRateStateChanged(reserveRateState.Current);
@@ -91,7 +91,7 @@ public class InfoPanelUI : MonoBehaviour
             uiController.OnOniValueChanged -= HandleOniValueChanged;
 
         if (minimapManager != null)
-            minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+            minimapManager.OnDisplayedDistrictChanged -= HandleDisplayedDistrictChanged;
 
         if (reserveRateState != null)
             reserveRateState.OnStateChanged -= HandleReserveRateStateChanged;
@@ -289,5 +289,12 @@ public class InfoPanelUI : MonoBehaviour
 
         return closest;
     }
+    private void HandleDisplayedDistrictChanged(DistrictType districtType)
+    {
+        if (!_hasPredictContext)
+            return;
 
+        _selectedDistrict = districtType;
+        RefreshSimulationTemperatureDisplay();
+    }
 }
