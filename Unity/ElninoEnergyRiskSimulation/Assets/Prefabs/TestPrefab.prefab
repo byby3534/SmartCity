@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1048224929685079936
+--- !u!1 &1858447739367117177
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,59 +8,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8697634171751152284}
-  - component: {fileID: 1710315119800515962}
-  - component: {fileID: 1283499144733354322}
+  - component: {fileID: 7486078804683247509}
+  - component: {fileID: 4970890479104239218}
   m_Layer: 0
-  m_Name: DataManager
+  m_Name: PowerGridManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8697634171751152284
+--- !u!4 &7486078804683247509
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1048224929685079936}
+  m_GameObject: {fileID: 1858447739367117177}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4180507456290223588}
+  m_Father: {fileID: 7998945041114293232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1710315119800515962
+--- !u!114 &4970890479104239218
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1048224929685079936}
+  m_GameObject: {fileID: 1858447739367117177}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3269b3ecc347d943b41a69834171f18, type: 3}
+  m_Script: {fileID: 11500000, guid: 2860199daf4abd347870517976c17c2f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DataManager
-  apiClient: {fileID: 7922431310694080807}
-  uiController: {fileID: 1970570418660836511}
---- !u!114 &1283499144733354322
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1048224929685079936}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e4f1c2a9b7d6e5f40318293a7b6c5d4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SmartCity.Scripts::HideCesiumCredit
-  retryFrames: 60
---- !u!1 &1108918767898206306
+  m_EditorClassIdentifier: Assembly-CSharp::PowerGridManager
+  dataManager: {fileID: 7248016860364492631}
+--- !u!1 &2038671458877274364
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -68,55 +53,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 321874242400305823}
-  - component: {fileID: 2116474168996002242}
-  m_Layer: 0
-  m_Name: BuildingManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &321874242400305823
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1108918767898206306}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2116474168996002242
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1108918767898206306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4ae0dc313c1b214a89185f7ee6c3faf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SmartCity.Scripts::BuildingManager
-  districtManager: {fileID: 0}
-  terrainTileset: {fileID: 0}
-  cesiumGeoreference: {fileID: 0}
-  buildingMaterial: {fileID: 0}
---- !u!1 &1143553010424704365
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4180507456290223588}
+  - component: {fileID: 7998945041114293232}
   m_Layer: 0
   m_Name: TestPrefab
   m_TagString: Untagged
@@ -124,34 +61,33 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4180507456290223588
+--- !u!4 &7998945041114293232
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1143553010424704365}
+  m_GameObject: {fileID: 2038671458877274364}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 982.2498, y: -1482.288, z: 17838.049}
+  m_LocalPosition: {x: 9401.609, y: -1749.8583, z: 4594.3525}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5408338802384250924}
-  - {fileID: 12408128621237724}
-  - {fileID: 1280207090087317667}
-  - {fileID: 8697634171751152284}
-  - {fileID: 5854522319306132983}
-  - {fileID: 6822289029031174674}
-  - {fileID: 6410087892062620548}
-  - {fileID: 590020554035043372}
-  - {fileID: 2414258775001061889}
-  - {fileID: 321874242400305823}
-  - {fileID: 8016649418106814581}
-  - {fileID: 230282641741865420}
+  - {fileID: 8130544528741756962}
+  - {fileID: 3168689960526047420}
+  - {fileID: 6782270967518435638}
+  - {fileID: 8275599040458138459}
+  - {fileID: 4973407898561276358}
+  - {fileID: 7486078804683247509}
+  - {fileID: 5925942474428040139}
+  - {fileID: 3328959352128469692}
+  - {fileID: 26723915790952366}
+  - {fileID: 7245360778867126019}
+  - {fileID: 826488182520652496}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2563397207717470007
+--- !u!1 &3517875951001187681
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -159,48 +95,55 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 5408338802384250924}
-  - component: {fileID: 5628084255731729884}
+  - component: {fileID: 5925942474428040139}
+  - component: {fileID: 3697532804303230664}
   m_Layer: 0
-  m_Name: XchartUIManager
+  m_Name: GuBoundaryDecal
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &5408338802384250924
+--- !u!4 &5925942474428040139
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2563397207717470007}
+  m_GameObject: {fileID: 3517875951001187681}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -982.2498, y: 1482.288, z: -17838.049}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4180507456290223588}
+  m_Father: {fileID: 7998945041114293232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5628084255731729884
+--- !u!114 &3697532804303230664
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2563397207717470007}
+  m_GameObject: {fileID: 3517875951001187681}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6eba564a4732e4aa882e6ddb50db2bc5, type: 3}
+  m_Script: {fileID: 11500000, guid: a9cf0009183a7457bb92414c639ab899, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OniEnergyGraph
-  titleText: {fileID: 0}
-  chartPanel: {fileID: 0}
-  oniChart: {fileID: 0}
-  dataManager: {fileID: 1710315119800515962}
-  uiController: {fileID: 0}
---- !u!1 &2601368635065639924
+  m_EditorClassIdentifier: SmartCity.Scripts::GuBoundaryDecal
+  minimapManager: {fileID: 748649020648988423}
+  simulationController: {fileID: 8364584207458828630}
+  fileName: seoul_district.geojson
+  cesiumGeoreference: {fileID: 0}
+  decalMaterial: {fileID: 2100000, guid: 129a4714f408e42a3bbd547c816a6f0a, type: 2}
+  projectionDepth: 5000
+  altitude: 3000
+  drawDistance: 50000
+  textureResolution: 4096
+  lineHalfWidth: 0.65
+  lineColor: {r: 1, g: 0, b: 0, a: 1}
+  selectedFillColor: {r: 0.72, g: 0.72, b: 0.72, a: 0.62}
+--- !u!1 &3745422537073699823
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -208,9 +151,270 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1280207090087317667}
-  - component: {fileID: 2355951252335780687}
-  - component: {fileID: 5711885501291033242}
+  - component: {fileID: 8130544528741756962}
+  - component: {fileID: 175799106975013289}
+  m_Layer: 0
+  m_Name: DistrictManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8130544528741756962
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745422537073699823}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &175799106975013289
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745422537073699823}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61f5b4fa834388c419a6af70e5f1f252, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DistrictManager
+  dataManager: {fileID: 7248016860364492631}
+  buildingManager: {fileID: 5999843464059667212}
+--- !u!1 &6039449325733539573
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 26723915790952366}
+  - component: {fileID: 5999843464059667212}
+  m_Layer: 0
+  m_Name: BuildingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &26723915790952366
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6039449325733539573}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5999843464059667212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6039449325733539573}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4ae0dc313c1b214a89185f7ee6c3faf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::BuildingManager
+  terrainTileset: {fileID: 0}
+  cesiumGeoreference: {fileID: 0}
+  buildingMaterial: {fileID: 2100000, guid: 3ea5b46cfa5ee41d3aeb163cb7760735, type: 2}
+  districtManager: {fileID: 175799106975013289}
+  simulationController: {fileID: 8364584207458828630}
+  minimapManager: {fileID: 748649020648988423}
+  mainCameraController: {fileID: 0}
+  buildingsPerBatch: 100
+  secondsBetweenBatch: 0.05
+  blackoutHoldDuration: 3
+  secondsBetweenRestoreBatch: 0.03
+--- !u!1 &6068119345372443458
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4973407898561276358}
+  - component: {fileID: 5358970556339411705}
+  m_Layer: 0
+  m_Name: UIController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4973407898561276358
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6068119345372443458}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5358970556339411705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6068119345372443458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d6d949cd7ba39241a08b0444a3f4f1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIController
+  datePicker: {fileID: 0}
+  oniSliderPanel: {fileID: 0}
+  oniSlider: {fileID: 0}
+  oniTypeText: {fileID: 0}
+  oniNumText: {fileID: 0}
+  simulationStartButton: {fileID: 0}
+--- !u!1 &6390095544193423595
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6782270967518435638}
+  - component: {fileID: 7248016860364492631}
+  - component: {fileID: 8437372615030349325}
+  m_Layer: 0
+  m_Name: DataManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6782270967518435638
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6390095544193423595}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7248016860364492631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6390095544193423595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3269b3ecc347d943b41a69834171f18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DataManager
+  apiClient: {fileID: 132574219588413452}
+  uiController: {fileID: 5358970556339411705}
+--- !u!114 &8437372615030349325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6390095544193423595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e4f1c2a9b7d6e5f40318293a7b6c5d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::HideCesiumCredit
+  retryFrames: 60
+--- !u!1 &6394627978293080167
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 826488182520652496}
+  - component: {fileID: 2946804114776102409}
+  m_Layer: 0
+  m_Name: ReserveRateStateController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &826488182520652496
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6394627978293080167}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4808.1514, y: 1749.8583, z: 48189.26}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2946804114776102409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6394627978293080167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9e5a3b64d0f6c8a1b2e4f7d0a3c6b95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::ReserveRateStateController
+  dataManager: {fileID: 7248016860364492631}
+  uiController: {fileID: 5358970556339411705}
+  simulationController: {fileID: 8364584207458828630}
+  simulationFullRecoveryRatio: 0.3
+  simCompletedHoldSeconds: 2
+  simCompletedTailSeconds: 1
+--- !u!1 &6981870005026409753
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3168689960526047420}
+  - component: {fileID: 5192243854046689115}
+  - component: {fileID: 7756500654514696319}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -218,28 +422,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 0
---- !u!4 &1280207090087317667
+--- !u!4 &3168689960526047420
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2601368635065639924}
+  m_GameObject: {fileID: 6981870005026409753}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -960.75, y: -15, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4180507456290223588}
+  m_Father: {fileID: 7998945041114293232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2355951252335780687
+--- !u!114 &5192243854046689115
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2601368635065639924}
+  m_GameObject: {fileID: 6981870005026409753}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
@@ -248,13 +452,13 @@ MonoBehaviour:
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
---- !u!114 &5711885501291033242
+--- !u!114 &7756500654514696319
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2601368635065639924}
+  m_GameObject: {fileID: 6981870005026409753}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
@@ -279,7 +483,7 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
---- !u!1 &3148466803085907177
+--- !u!1 &7042162230028880299
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -287,201 +491,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2414258775001061889}
-  - component: {fileID: 6730944337062574733}
-  m_Layer: 0
-  m_Name: BlackoutSimulationController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2414258775001061889
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3148466803085907177}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6730944337062574733
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3148466803085907177}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4bdfbf0c84fe04eed93efe761ad7bebb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SmartCity.Scripts::BlackoutSimulationController
-  dataManager: {fileID: 0}
---- !u!1 &4780921253663895104
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 230282641741865420}
-  - component: {fileID: 8659827275220319299}
-  m_Layer: 0
-  m_Name: MinimapColorController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &230282641741865420
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4780921253663895104}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1014.25, y: 1482.288, z: -18498.049}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8659827275220319299
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4780921253663895104}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6919b89ab80dc4f0b8a7c97fb05820ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SmartCity.Scripts::MinimapColorController
-  minimapManager: {fileID: 0}
-  dataManager: {fileID: 0}
-  lowPowerColor: {r: 1, g: 0.9, b: 0.75, a: 0.9}
-  highPowerColor: {r: 1, g: 0.25, b: 0.05, a: 0.9}
-  blackoutColor: {r: 0.2, g: 0.2, b: 0.2, a: 0.9}
---- !u!1 &4805271982088816925
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6410087892062620548}
-  - component: {fileID: 8463661456744209042}
-  m_Layer: 0
-  m_Name: PowerGridManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6410087892062620548
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4805271982088816925}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8463661456744209042
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4805271982088816925}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2860199daf4abd347870517976c17c2f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PowerGridManager
-  dataManager: {fileID: 1710315119800515962}
---- !u!1 &5743362566020846408
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 590020554035043372}
-  - component: {fileID: 103108500650921485}
-  m_Layer: 0
-  m_Name: GuBoundaryDecal
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &590020554035043372
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5743362566020846408}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &103108500650921485
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5743362566020846408}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9cf0009183a7457bb92414c639ab899, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SmartCity.Scripts::GuBoundaryDecal
-  fileName: seoul_district.geojson
-  cesiumGeoreference: {fileID: 0}
-  decalMaterial: {fileID: 0}
-  projectionDepth: 5000
-  altitude: 3000
-  drawDistance: 50000
-  textureResolution: 4096
-  lineHalfWidth: 0.65
-  lineColor: {r: 1, g: 0, b: 0, a: 1}
-  selectedFillColor: {r: 0.72, g: 0.72, b: 0.72, a: 0.62}
---- !u!1 &7565144512346115843
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5854522319306132983}
-  - component: {fileID: 7922431310694080807}
+  - component: {fileID: 8275599040458138459}
+  - component: {fileID: 132574219588413452}
   m_Layer: 0
   m_Name: APIClient
   m_TagString: Untagged
@@ -489,35 +500,35 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &5854522319306132983
+--- !u!4 &8275599040458138459
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7565144512346115843}
+  m_GameObject: {fileID: 7042162230028880299}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4180507456290223588}
+  m_Father: {fileID: 7998945041114293232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7922431310694080807
+--- !u!114 &132574219588413452
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7565144512346115843}
+  m_GameObject: {fileID: 7042162230028880299}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 00f2f1c7671aa42bc8996f6ecd296c97, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ApiClient
   serverUrl: http://localhost:5001
---- !u!1 &8450886514579670760
+--- !u!1 &8654483931087714482
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -525,103 +536,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6822289029031174674}
-  - component: {fileID: 1970570418660836511}
-  m_Layer: 0
-  m_Name: UIController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6822289029031174674
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8450886514579670760}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1970570418660836511
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8450886514579670760}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d6d949cd7ba39241a08b0444a3f4f1a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIController
-  datePicker: {fileID: 0}
-  oniSliderPanel: {fileID: 0}
-  oniSlider: {fileID: 0}
-  oniTypeText: {fileID: 0}
-  oniNumText: {fileID: 0}
---- !u!1 &8455313259915467346
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 12408128621237724}
-  - component: {fileID: 6712415921854460043}
-  m_Layer: 0
-  m_Name: DistrictManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &12408128621237724
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8455313259915467346}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.51758}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4180507456290223588}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6712415921854460043
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8455313259915467346}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61f5b4fa834388c419a6af70e5f1f252, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DistrictManager
-  dataManager: {fileID: 1710315119800515962}
-  buildingManager: {fileID: 0}
---- !u!1 &8626113785183535837
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8016649418106814581}
-  - component: {fileID: 6621556168656774471}
+  - component: {fileID: 7245360778867126019}
+  - component: {fileID: 748649020648988423}
   m_Layer: 0
   m_Name: MinimapManager
   m_TagString: Untagged
@@ -629,28 +545,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8016649418106814581
+--- !u!4 &7245360778867126019
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8626113785183535837}
+  m_GameObject: {fileID: 8654483931087714482}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -1014.25, y: 1482.288, z: -18498.049}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4180507456290223588}
+  m_Father: {fileID: 7998945041114293232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6621556168656774471
+--- !u!114 &748649020648988423
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8626113785183535837}
+  m_GameObject: {fileID: 8654483931087714482}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a3a662cdd366345fb9945d4c0ad4b006, type: 3}
@@ -664,3 +580,52 @@ MonoBehaviour:
   outlineWidth: 1.5
   tooltipRoot: {fileID: 0}
   tooltipText: {fileID: 0}
+  districtLabelText: {fileID: 0}
+  SelectedGuName: {fileID: 0}
+  simulationController: {fileID: 8364584207458828630}
+  initialDistrict: 11110
+--- !u!1 &8806002742794391744
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3328959352128469692}
+  - component: {fileID: 8364584207458828630}
+  m_Layer: 0
+  m_Name: BlackoutSimulationController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3328959352128469692
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8806002742794391744}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.2197876, y: -15, z: 8.517578}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7998945041114293232}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8364584207458828630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8806002742794391744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bdfbf0c84fe04eed93efe761ad7bebb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SmartCity.Scripts::BlackoutSimulationController
+  dataManager: {fileID: 7248016860364492631}
