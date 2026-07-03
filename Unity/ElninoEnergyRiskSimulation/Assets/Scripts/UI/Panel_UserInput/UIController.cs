@@ -42,7 +42,8 @@ public class UIController : MonoBehaviour
 
     private void Awake()
     {
-        ResolveReferences();
+        SceneRefs.Resolve(ref datePicker);
+        WarnMissingReferences();
 
         if (datePicker != null)
         {
@@ -54,52 +55,12 @@ public class UIController : MonoBehaviour
         EnsureSimulationStartButton();
     }
 
-    private void ResolveReferences()
+    private void WarnMissingReferences()
     {
-        if (datePicker == null)
-            datePicker = FindFirstObjectByType<SimulationDatePicker>();
-
-        if (oniSliderPanel == null)
-            oniSliderPanel = FindUiObject("Panel_ONI_Adjust");
-
-        if (oniSlider == null)
-        {
-            GameObject sliderPanel = FindUiObject("Panel_ONI_Slider");
-            if (sliderPanel != null)
-                oniSlider = sliderPanel.GetComponentInChildren<Slider>(true);
-        }
-
-        if (oniNumText == null)
-        {
-            GameObject sliderPanel = FindUiObject("Panel_ONI_Slider");
-            if (sliderPanel != null)
-            {
-                foreach (TMP_Text text in sliderPanel.GetComponentsInChildren<TMP_Text>(true))
-                {
-                    if (text.name.Contains("Num"))
-                    {
-                        oniNumText = text;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (oniTypeText == null)
-        {
-            GameObject sliderPanel = FindUiObject("Panel_ONI_Slider");
-            if (sliderPanel != null)
-            {
-                foreach (TMP_Text text in sliderPanel.GetComponentsInChildren<TMP_Text>(true))
-                {
-                    if (text.name.Contains("Type") || text.name.Contains("Label"))
-                    {
-                        oniTypeText = text;
-                        break;
-                    }
-                }
-            }
-        }
+        SceneRefs.Require(this, datePicker, nameof(datePicker));
+        SceneRefs.Require(this, oniSlider, nameof(oniSlider));
+        SceneRefs.Require(this, oniSliderPanel, nameof(oniSliderPanel));
+        SceneRefs.Require(this, simulationStartButton, nameof(simulationStartButton));
     }
 
     private void EnsureSliderWired()
@@ -131,25 +92,11 @@ public class UIController : MonoBehaviour
 
     private void EnsureSimulationStartButton()
     {
-        if (simulationStartButton == null)
-            simulationStartButton = FindUiObject("Btn_BlakcoutSimulation");
-
         if (simulationStartButton != null &&
             simulationStartButton.GetComponent<RollingBlackoutStartButton>() == null)
         {
             simulationStartButton.AddComponent<RollingBlackoutStartButton>();
         }
-    }
-
-    private static GameObject FindUiObject(string objectName)
-    {
-        foreach (Transform target in FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if (target.name == objectName)
-                return target.gameObject;
-        }
-
-        return null;
     }
 
     private void OnEnable()
@@ -185,7 +132,6 @@ public class UIController : MonoBehaviour
     // DataManager에서 /oni 응답 후 호출 — 슬라이더 값 설정 및 활성화
     public void InitSlider(float oniValue, float min = -2.5f, float max = 2.5f)
     {
-        ResolveReferences();
         EnsureSliderWired();
 
         if (oniSlider != null)

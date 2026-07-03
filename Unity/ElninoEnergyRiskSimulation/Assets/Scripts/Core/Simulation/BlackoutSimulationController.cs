@@ -121,6 +121,9 @@ public class BlackoutSimulationController : MonoBehaviour
 
         Debug.Log("[BlackoutSimulationController] 시뮬레이션 완료");
         _simulationCoroutine = null;
+        // LogEventBridge.HandleSimulationCompleted()가 _simulationCompletedNaturally를 먼저 true로 세팅한 뒤
+        // RequestToggle(false) → HandleSimulationToggled(false)가 호출되어야 "중단" 로그가 찍히지 않는다.
+        // 이 순서를 바꾸면 LogEventBridge의 완료/중단 로그 판별이 깨진다.
         OnSimulationCompleted?.Invoke();
         RequestToggle(false);
     }

@@ -29,6 +29,26 @@ public class OniImpactPanel : MonoBehaviour
             uiController = FindFirstObjectByType<UIController>();
 
         ResolveReferences();
+        WarnMissingReferences();
+    }
+
+    private void WarnMissingReferences()
+    {
+        WarnIfNull(temperatureRatioText, "Panel_Temperature/Text_Ratio");
+        WarnIfNull(energyUsageRatioText, "Panel_EnergyUsage/Text_Ratio");
+        WarnIfNull(energySupplyRatioText, "Panel_EnergySupply/Text_Ratio");
+        WarnIfNull(reserveRateRatioText, "Panel_ReserveRate/Text_Ratio");
+    }
+
+    private void WarnIfNull(TMP_Text text, string expectedPath)
+    {
+        if (text != null)
+            return;
+
+        Debug.LogWarning(
+            $"[{nameof(OniImpactPanel)}] TMP_Text가 연결되지 않았습니다. " +
+            $"인스펙터에서 연결하거나 하이어라키에 {expectedPath}가 있는지 확인하세요.",
+            this);
     }
 
     private void OnEnable()
@@ -150,9 +170,23 @@ public class OniImpactPanel : MonoBehaviour
     private TMP_Text FindRatioText(string panelName)
     {
         Transform panel = FindChildByName(transform, panelName);
-        if (panel == null) return null;
+        if (panel == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(OniImpactPanel)}] 하이어라키에서 '{panelName}'을(를) 찾지 못했습니다.",
+                this);
+            return null;
+        }
 
-        return panel.Find("Text_Ratio")?.GetComponent<TMP_Text>();
+        TMP_Text text = panel.Find("Text_Ratio")?.GetComponent<TMP_Text>();
+        if (text == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(OniImpactPanel)}] '{panelName}/Text_Ratio' TMP_Text를 찾지 못했습니다.",
+                this);
+        }
+
+        return text;
     }
 
     private static Transform FindChildByName(Transform root, string name)
