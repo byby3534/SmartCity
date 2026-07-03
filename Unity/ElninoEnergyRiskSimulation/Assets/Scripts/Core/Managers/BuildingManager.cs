@@ -52,6 +52,7 @@ public class BuildingManager : MonoBehaviour
 
     private BuildingRenderData[] cachedRenderData;
     private bool bufferDirty;
+    private bool _apiLoaded;
 
     private Dictionary<int, (int start, int count)> districtRanges = new();
 
@@ -460,6 +461,12 @@ public class BuildingManager : MonoBehaviour
 
         renderBuffer.SetData(cachedRenderData);
         bufferDirty = false;
+
+        if (!_apiLoaded)
+        {
+            _apiLoaded = true;
+            buildingMaterial.SetFloat("_ApiLoaded", 1f);
+        }
     }
     #endregion
 
@@ -572,6 +579,7 @@ public class BuildingManager : MonoBehaviour
 
             for (int j = i; j < end; j++)
             {
+                if (cachedRenderData[sortedIndices[j]].reductionValue <= 0f) continue;  // 추가
                 cachedRenderData[sortedIndices[j]].isBlackout = 1;
             }
 
@@ -596,6 +604,7 @@ public class BuildingManager : MonoBehaviour
 
             for (int j = i; j < end; j++)
             {
+                if (cachedRenderData[sortedIndices[j]].reductionValue <= 0f) continue;  // 추가
                 cachedRenderData[sortedIndices[j]].isBlackout = 0;
             }
 
