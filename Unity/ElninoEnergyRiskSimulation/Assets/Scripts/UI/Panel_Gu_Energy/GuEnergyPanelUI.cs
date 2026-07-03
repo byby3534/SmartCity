@@ -36,19 +36,16 @@ public class GuEnergyPanelUI : MonoBehaviour
     [SerializeField] private DataManager dataManager;
     [SerializeField] private MinimapManager minimapManager;
 
-    private const DistrictType DefaultDistrict = DistrictType.JONGNO;
     private const float DonutStartAngleDeg = 90f;
     private const int SegmentCount = 7;
 
     private readonly Dictionary<DistrictType, DistrictData> _districtDataMap = new();
     private float _seoulTotalConsumption;
     private bool _hasPredictData;
-    private DistrictType _selectedDistrict = DefaultDistrict;
     private CanvasGroup _panelCanvasGroup;
 
     private void Awake()
     {
-                    // 씬에 하나만 있는 매니저들은 비어 있으면 자동으로 찾기
         SceneRefs.Resolve(ref dataManager);
         SceneRefs.Resolve(ref minimapManager);
 
@@ -70,7 +67,7 @@ public class GuEnergyPanelUI : MonoBehaviour
         }
 
         if (minimapManager != null)
-            minimapManager.OnDistrictSelected += HandleDistrictSelected;
+            minimapManager.OnDisplayedDistrictChanged += HandleDisplayedDistrictChanged;
     }
 
     private void OnDisable()
@@ -82,7 +79,7 @@ public class GuEnergyPanelUI : MonoBehaviour
         }
 
         if (minimapManager != null)
-            minimapManager.OnDistrictSelected -= HandleDistrictSelected;
+            minimapManager.OnDisplayedDistrictChanged -= HandleDisplayedDistrictChanged;
     }
 
     private void HandlePowerDataUpdated(PowerGridData data)
@@ -91,31 +88,27 @@ public class GuEnergyPanelUI : MonoBehaviour
         _seoulTotalConsumption = data.seoulTotalConsumption;
         _hasPredictData = true;
         SetPanelVisible(true);
-
-        if (_districtDataMap.TryGetValue(_selectedDistrict, out DistrictData selected))
-            RefreshDisplayFromData(selected);
     }
 
-    // predict의 구역별 데이터 도착 — 현재 선택된 구(기본값 종로구)라면 패널 갱신
     private void HandleDistrictDataUpdated(DistrictData data)
     {
         _districtDataMap[data.districtType] = data;
 
-        if (_hasPredictData && _selectedDistrict == data.districtType)
+        if (_hasPredictData && minimapManager != null && minimapManager.DisplayedDistrict == data.districtType)
             RefreshDisplay();
     }
 
-    private void HandleDistrictSelected(DistrictType districtType)
+    private void HandleDisplayedDistrictChanged(DistrictType districtType)
     {
-        _selectedDistrict = districtType;
-
-        if (_hasPredictData && _districtDataMap.ContainsKey(districtType))
-            RefreshDisplay();
+        RefreshDisplay();
     }
 
     private void RefreshDisplay()
     {
-        if (!_hasPredictData || !_districtDataMap.TryGetValue(_selectedDistrict, out DistrictData data))
+        if (minimapManager == null || !_hasPredictData)
+            return;
+
+        if (!_districtDataMap.TryGetValue(minimapManager.DisplayedDistrict, out DistrictData data))
             return;
 
         RefreshDisplayFromData(data);
@@ -296,6 +289,7 @@ public class GuEnergyPanelUI : MonoBehaviour
 
         return null;
     }
+
     private bool RequireArray<T>(T[] array, string fieldName, int count) where T : Object
     {
         if (array == null || array.Length < count)
