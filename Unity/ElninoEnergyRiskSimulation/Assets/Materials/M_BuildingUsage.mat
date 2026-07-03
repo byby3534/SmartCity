@@ -31,7 +31,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AmbientStrength: 0.35
-    - _ApiLoaded: 0
+    - _ApiLoaded: 1
+    - _BuildingDataTexHeight: 34
+    - _BuildingDataTexWidth: 16384
     - _ColorMax: 0.8
     - _ColorMin: 0
     m_Colors:
