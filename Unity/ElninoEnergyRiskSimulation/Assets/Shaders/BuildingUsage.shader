@@ -9,7 +9,9 @@ Shader "SmartCity/BuildingUsage"
         _DangerColor  ("Danger Color (High)",      Color) = (1.0, 0.1, 0.1, 1.0)
         _ColorMin     ("Color Range Min",          Range(0, 1)) = 0.0
         _ColorMax     ("Color Range Max",          Range(0, 1)) = 1.0
-        _ApiLoaded    ("API Loaded",               Float) = 0.0
+        _ApiLoaded          ("API Loaded",               Float) = 0.0
+        _BuildingDataTexWidth  ("Building Data Tex Width",  Float) = 16384.0
+        _BuildingDataTexHeight ("Building Data Tex Height", Float) = 1.0
 
         [Header(Blackout)]
         _BlackoutColor("Blackout Color",      Color) = (0.02, 0.02, 0.02, 1.0)
@@ -33,7 +35,7 @@ Shader "SmartCity/BuildingUsage"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 4.5
+            #pragma target 3.0
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
@@ -42,14 +44,7 @@ Shader "SmartCity/BuildingUsage"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            // ── 렌더링 전용 경량 구조체 (C# BuildingRenderData와 동일) ──
-            struct BuildingRenderData
-            {
-                float reductionValue;  // 4 bytes — 수요감축 필요도 (0~1)
-                int   isBlackout;      // 4 bytes — 정전 여부 (0 or 1)
-            };
-
-            StructuredBuffer<BuildingRenderData> _BuildingRenderBuffer;
+            sampler2D _BuildingDataTex;
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _SafeColor;
@@ -61,6 +56,8 @@ Shader "SmartCity/BuildingUsage"
                 float  _ColorMin;
                 float  _ColorMax;
                 float  _ApiLoaded;
+                float  _BuildingDataTexWidth;
+                float  _BuildingDataTexHeight;
             CBUFFER_END
 
             struct Attributes
@@ -101,10 +98,16 @@ Shader "SmartCity/BuildingUsage"
 
             half4 frag(Varyings input) : SV_Target
             {
-                BuildingRenderData data = _BuildingRenderBuffer[input.dataIndex];
+                float col = fmod(input.dataIndex, _BuildingDataTexWidth);
+                float row = floor(input.dataIndex / _BuildingDataTexWidth);
+                float u = (col + 0.5) / _BuildingDataTexWidth;
+                float v = (row + 0.5) / _BuildingDataTexHeight;
+                float4 texData = tex2D(_BuildingDataTex, float2(u, v));
+                float reductionValue = texData.r;
+                int   isBlackout     = (int)(texData.g + 0.5);
 
                 // ── 1. 블랙아웃 처리 ──
-                if (data.isBlackout == 1)
+                if (isBlackout == 1)
                     return half4(_BlackoutColor.rgb, 1.0);
 
                 float3 baseColor;
@@ -115,13 +118,13 @@ Shader "SmartCity/BuildingUsage"
                     baseColor = _DefaultColor.rgb;
                 }
                 // ── 3. API 로드 후 ──
-                else if (data.reductionValue <= 0.0)
+                else if (reductionValue <= 0.0)
                 {
                     baseColor = _ZeroColor.rgb;  // 점수 없는 건물 → 파란색
                 }
                 else
                 {
-                    baseColor = EvaluateHeatmap(data.reductionValue);  // 컬러맵
+                    baseColor = EvaluateHeatmap(reductionValue);  // 컬러맵
                 }
 
                 // ── 4. 기본 디퓨즈 라이팅 ──
