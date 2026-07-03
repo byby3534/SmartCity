@@ -189,7 +189,15 @@ public class DataManager : MonoBehaviour
 
         apiClient.FetchOni(year, month, (data) =>
         {
-            if (data != null) fetchedOni = data["output"]["oni"].Value<float>();
+            try
+            {
+                if (data?["output"]?["oni"] != null)
+                    fetchedOni = data["output"]["oni"].Value<float>();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DataManager] ONI 응답 파싱 실패: {ex.Message}");
+            }
             isOniLoaded = true;
         });
 

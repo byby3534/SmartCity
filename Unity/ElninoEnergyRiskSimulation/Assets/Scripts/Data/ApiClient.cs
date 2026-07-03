@@ -117,6 +117,9 @@ public class ApiClient : MonoBehaviour
         if (req.result == UnityWebRequest.Result.Success)
             onSuccess?.Invoke(JObject.Parse(req.downloadHandler.text));
         else
+        {
             OnError?.Invoke($"[POST {url}] {req.responseCode} {req.error}");
+            onSuccess?.Invoke(null);
+        }
     }
 }
