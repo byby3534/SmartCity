@@ -437,6 +437,7 @@ public class BuildingManager : MonoBehaviour
         buildingMaterial.SetTexture("_BuildingDataTex", renderTexture);
         buildingMaterial.SetFloat("_BuildingDataTexWidth", TexWidth);
         buildingMaterial.SetFloat("_BuildingDataTexHeight", _texHeight);
+        ResetApiLoadedState();
 
         UploadToTexture();
 
@@ -477,6 +478,22 @@ public class BuildingManager : MonoBehaviour
         }
     }
 
+    public void ResetApiLoadedState()
+    {
+        _apiLoaded = false;
+        if (buildingMaterial != null)
+            buildingMaterial.SetFloat("_ApiLoaded", 0f);
+    }
+
+    public void MarkPredictDataLoaded()
+    {
+        if (_apiLoaded || buildingMaterial == null)
+            return;
+
+        _apiLoaded = true;
+        buildingMaterial.SetFloat("_ApiLoaded", 1f);
+    }
+
     public void FlushBufferToGPU()
     {
         if (!bufferDirty || cachedRenderData == null || renderTexture == null)
@@ -484,12 +501,6 @@ public class BuildingManager : MonoBehaviour
 
         UploadToTexture();
         bufferDirty = false;
-
-        if (!_apiLoaded)
-        {
-            _apiLoaded = true;
-            buildingMaterial.SetFloat("_ApiLoaded", 1f);
-        }
     }
     #endregion
 
@@ -584,13 +595,14 @@ public class BuildingManager : MonoBehaviour
         Debug.Log("[BuildingManager] 구역 정전 연출 시작: " + DataConverter.GetDistrictName(_pendingBlackoutDistrict));
         if (_pendingBlackoutDistrict == DistrictType.None) return;
 
-        int districtId = (int)_pendingBlackoutDistrict;
+        DistrictType districtType = _pendingBlackoutDistrict;
         _pendingBlackoutDistrict = DistrictType.None;
 
+        int districtId = (int)districtType;
         if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices)) return;
 
         if (blackoutCoroutine != null) StopCoroutine(blackoutCoroutine);
-        blackoutCoroutine = StartCoroutine(BlackoutSequence(_pendingBlackoutDistrict, sortedIndices));
+        blackoutCoroutine = StartCoroutine(BlackoutSequence(districtType, sortedIndices));
     }
 
     IEnumerator BlackoutSequence(DistrictType districtType, int[] sortedIndices)

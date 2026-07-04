@@ -207,9 +207,10 @@ public class DistrictManager : MonoBehaviour
             }
         }
 
-        // GPU에 반영
+        // GPU에 반영 (/predict 데이터가 도착한 뒤에만 히트맵 색상 사용)
         buildingManager.MarkBufferDirty();
         buildingManager.FlushBufferToGPU();
+        buildingManager.MarkPredictDataLoaded();
         buildingManager.RebuildSortedIndices(); // GPU에서 reductionValue 기준으로 정렬된 인덱스 재생성
 
         Debug.Log($"[DistrictManager] reductionValue 갱신 완료 ({updatedCount}개 건물, 범위 {minScore:F3}~{maxScore:F3})");
