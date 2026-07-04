@@ -822,11 +822,11 @@ PlayerSettings:
   webGLThreadsSupport: 1
   webGLDecompressionFallback: 0
   webGLInitialMemorySize: 2048
-  webGLMaximumMemorySize: 4096
+  webGLMaximumMemorySize: 8192
   webGLMemoryGrowthMode: 2
   webGLMemoryLinearGrowthStep: 32
   webGLMemoryGeometricGrowthStep: 0.2
-  webGLMemoryGeometricGrowthCap: 512
+  webGLMemoryGeometricGrowthCap: 1024
   webGLPowerPreference: 2
   webGLWebAssemblyTable: 0
   webGLWebAssemblyBigInt: 0
