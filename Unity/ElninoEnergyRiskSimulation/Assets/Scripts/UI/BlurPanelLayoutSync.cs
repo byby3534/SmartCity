@@ -80,7 +80,7 @@ public class BlurPanelLayoutSync : MonoBehaviour
 
     private void Start()
     {
-        WebGLRuntimeTuning.TuneBlurGroups();
+        WebGLRuntimeTuning.TuneAll();
         SyncAll();
         StartCoroutine(SyncUntilStable());
     }

@@ -1,17 +1,30 @@
+using System.Collections;
 using System.Collections.Generic;
+using CesiumForUnity;
 using NovaSamples.Effects;
 using UnityEngine;
 
 /// <summary>
-/// WebGL 브라우저 실행 시 메모리·블러 부하를 줄인다.
+/// WebGL 브라우저 실행 시 메모리·블러·Cesium 부하를 줄인다.
 /// </summary>
 public static class WebGLRuntimeTuning
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Apply()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Bootstrap()
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
         Application.targetFrameRate = 60;
+        var host = new GameObject(nameof(WebGLRuntimeTuning));
+        Object.DontDestroyOnLoad(host);
+        host.AddComponent<WebGLRuntimeTuningHost>();
+#endif
+    }
+
+    public static void TuneAll()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        TuneCesiumTilesets();
+        TuneBlurGroups();
 #endif
     }
 
@@ -23,7 +36,6 @@ public static class WebGLRuntimeTuning
         if (groups.Count == 0)
             return;
 
-        // 좌/우 각각 BackgroundBlurGroup이 있으면 Cesium 전체를 두 번 캡처한다 → RT 메모리 2배.
         BackgroundBlurGroup primary = groups[0];
         for (int i = 1; i < groups.Count; i++)
         {
@@ -40,23 +52,51 @@ public static class WebGLRuntimeTuning
             duplicate.enabled = false;
         }
 
-        if (primary.RenderDownscaleFactor < 3)
-            primary.RenderDownscaleFactor = 3;
-
-        if (primary.RenderFrameInterval < 2)
-            primary.RenderFrameInterval = 2;
+        primary.RenderDownscaleFactor = Mathf.Max(primary.RenderDownscaleFactor, 4);
+        primary.RenderFrameInterval = Mathf.Max(primary.RenderFrameInterval, 3);
+        primary.RenderFrequency = UpdateFrequency.ManualOnly;
 
         foreach (var effect in Object.FindObjectsByType<BlurEffect>(FindObjectsSortMode.None))
         {
-            if (effect.BlurDownscaleFactor < 2)
-                effect.BlurDownscaleFactor = 2;
+            effect.BlurDownscaleFactor = Mathf.Max(effect.BlurDownscaleFactor, 3);
+            effect.BlurFrameInterval = Mathf.Max(effect.BlurFrameInterval, 4);
+            effect.BlurFrequency = UpdateFrequency.ManualOnly;
 
-            if (effect.BlurFrameInterval < 2)
-                effect.BlurFrameInterval = 2;
+            if (effect.BlurRadius > 20)
+                effect.BlurRadius = 20;
+        }
+#endif
+    }
 
-            if (effect.BlurRadius > 24)
-                effect.BlurRadius = 24;
+    private static void TuneCesiumTilesets()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        foreach (var tileset in Object.FindObjectsByType<Cesium3DTileset>(FindObjectsSortMode.None))
+        {
+            if (tileset.maximumScreenSpaceError < 48f)
+                tileset.maximumScreenSpaceError = 48f;
+
+            if (tileset.maximumCachedBytes > 128L * 1024 * 1024)
+                tileset.maximumCachedBytes = 128L * 1024 * 1024;
+
+            if (tileset.maximumSimultaneousTileLoads > 8)
+                tileset.maximumSimultaneousTileLoads = 8;
+
+            tileset.preloadAncestors = false;
+            tileset.preloadSiblings = false;
         }
 #endif
     }
 }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+internal sealed class WebGLRuntimeTuningHost : MonoBehaviour
+{
+    private IEnumerator Start()
+    {
+        yield return null;
+        WebGLRuntimeTuning.TuneAll();
+        Destroy(gameObject);
+    }
+}
+#endif

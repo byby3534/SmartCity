@@ -211,9 +211,12 @@ public class DistrictManager : MonoBehaviour
         buildingManager.MarkBufferDirty();
         buildingManager.FlushBufferToGPU();
         buildingManager.MarkPredictDataLoaded();
-        buildingManager.RebuildSortedIndices(); // GPU에서 reductionValue 기준으로 정렬된 인덱스 재생성
+#if !(UNITY_WEBGL && !UNITY_EDITOR)
+        buildingManager.RebuildSortedIndices();
+#endif
 
         Debug.Log($"[DistrictManager] reductionValue 갱신 완료 ({updatedCount}개 건물, 범위 {minScore:F3}~{maxScore:F3})");
+        WebGLMemoryDiagnostics.LogSnapshot("predict-applied", buildingManager);
 
         Debug.Log($"[Check] index 0 reductionValue = {buffer[0].reductionValue}, index 100 = {buffer[100].reductionValue}");
     }

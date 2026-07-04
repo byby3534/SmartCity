@@ -50,6 +50,8 @@ public class BuildingManager : MonoBehaviour
     public Material buildingMaterial;
     // private ComputeBuffer renderBuffer;
     private Texture2D renderTexture;
+    private Color[] _pixelUploadBuffer;
+    private readonly List<int> _batchChangedIndices = new();
 
     private BuildingRenderData[] cachedRenderData;
     private bool bufferDirty;
@@ -71,6 +73,14 @@ public class BuildingManager : MonoBehaviour
     private bool _isSimulationActive;
     private DistrictType _selectedDistrict = DistrictType.None;
     private DistrictType _pendingBlackoutDistrict = DistrictType.None;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    private const bool LazyDistrictMeshes = true;
+#else
+    private const bool LazyDistrictMeshes = false;
+#endif
+
+    private readonly Dictionary<int, Coroutine> _districtLoadCoroutines = new();
 
     [Header("매니저 연결")]
     [SerializeField] private DistrictManager districtManager;
@@ -149,6 +159,12 @@ public class BuildingManager : MonoBehaviour
         if (buildingMaterial != null)
             buildingMaterial = new Material(buildingMaterial);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        buildingsPerBatch = Mathf.Max(buildingsPerBatch, 400);
+        secondsBetweenBatch = Mathf.Max(secondsBetweenBatch, 0.08f);
+        secondsBetweenRestoreBatch = Mathf.Max(secondsBetweenRestoreBatch, 0.06f);
+#endif
+
         SceneRefs.Resolve(ref districtManager);
         SceneRefs.Resolve(ref simulationController);
         SceneRefs.Resolve(ref minimapManager);
@@ -220,6 +236,15 @@ public class BuildingManager : MonoBehaviour
         yield return new WaitForSeconds(2.0f);
         Debug.Log("[BuildingManager] Tileset 준비 완료. 구역별 메시 생성 시작...");
 
+        if (LazyDistrictMeshes)
+        {
+            Debug.Log("[BuildingManager] WebGL lazy mode — 선택/시뮬 구만 메시 생성 (데이터는 25구 전체 로드됨)");
+            yield return SpawnDistrictAsync((int)DistrictType.JONGNO);
+            WebGLMemoryDiagnostics.LogSnapshot("lazy-default-district", this);
+            Debug.Log("[BuildingManager] lazy mode 초기 구 메시 준비 완료.");
+            yield break;
+        }
+
         foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
         {
             if (district == DistrictType.None) continue;
@@ -227,6 +252,49 @@ public class BuildingManager : MonoBehaviour
         }
 
         Debug.Log("[BuildingManager] 모든 구역 메시 생성 완료.");
+        WebGLMemoryDiagnostics.LogSnapshot("all-district-meshes-ready", this);
+    }
+
+    public string GetMemoryReportLine()
+    {
+        int buildingCount = cachedRenderData?.Length ?? 0;
+        long texBytes = renderTexture != null
+            ? (long)renderTexture.width * renderTexture.height * 4
+            : 0;
+        return $"buildings={buildingCount} districtRoots={districtRoots.Count} " +
+               $"dataTex={TexWidth}x{_texHeight} estTexMB={texBytes / (1024f * 1024f):F2} " +
+               $"lazyMeshes={LazyDistrictMeshes}";
+    }
+
+    private void RequestDistrictMesh(int districtId)
+    {
+        if (districtRoots.ContainsKey(districtId))
+            return;
+
+        if (_districtLoadCoroutines.TryGetValue(districtId, out Coroutine running) && running != null)
+            return;
+
+        _districtLoadCoroutines[districtId] = StartCoroutine(LoadDistrictMeshTracked(districtId));
+    }
+
+    private IEnumerator LoadDistrictMeshTracked(int districtId)
+    {
+        yield return SpawnDistrictAsync(districtId);
+        _districtLoadCoroutines.Remove(districtId);
+    }
+
+    private IEnumerator EnsureDistrictMeshesReady(params DistrictType[] districts)
+    {
+        foreach (DistrictType district in districts)
+        {
+            if (district == DistrictType.None) continue;
+
+            int districtId = (int)district;
+            RequestDistrictMesh(districtId);
+
+            while (!districtRoots.ContainsKey(districtId))
+                yield return null;
+        }
     }
 
     #region DataLoad
@@ -345,6 +413,8 @@ public class BuildingManager : MonoBehaviour
         r.shadowCastingMode = ShadowCastingMode.Off;
         r.receiveShadows = false;
 
+        Debug.Log($"[BuildingManager] 구 {districtId} 메시 생성 — verts={mesh.vertexCount:N0} tris={mesh.triangles.Length / 3:N0}");
+
         if (districtId != (int)DistrictType.JONGNO)
         {
             districtRoot.SetActive(false);
@@ -428,6 +498,12 @@ public class BuildingManager : MonoBehaviour
     private const int TexWidth = 16384;
     private int _texHeight;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+    private const TextureFormat BuildingTexFormat = TextureFormat.RGHalf;
+#else
+    private const TextureFormat BuildingTexFormat = TextureFormat.RGFloat;
+#endif
+
     private void InitializeRenderBuffer()
     {
         int count = GetRenderingBufferCount();
@@ -436,7 +512,7 @@ public class BuildingManager : MonoBehaviour
         SyncRenderCacheFromNative();
 
         _texHeight = Mathf.CeilToInt((float)count / TexWidth);
-        renderTexture = new Texture2D(TexWidth, _texHeight, TextureFormat.RGFloat, false);
+        renderTexture = new Texture2D(TexWidth, _texHeight, BuildingTexFormat, false);
         renderTexture.filterMode = FilterMode.Point;
         buildingMaterial.SetTexture("_BuildingDataTex", renderTexture);
         buildingMaterial.SetFloat("_BuildingDataTexWidth", TexWidth);
@@ -446,6 +522,18 @@ public class BuildingManager : MonoBehaviour
         UploadToTexture();
 
         Debug.Log($"[CityManager] 렌더링 버퍼 초기화 완료 ({count}개 건물, {TexWidth}x{_texHeight} 텍스처)");
+        WebGLMemoryDiagnostics.LogSnapshot("render-buffer-init", this);
+    }
+
+    private void EnsurePixelBuffer(int total)
+    {
+        if (_pixelUploadBuffer == null || _pixelUploadBuffer.Length != total)
+            _pixelUploadBuffer = new Color[total];
+    }
+
+    private static Color PackBuildingPixel(BuildingRenderData data)
+    {
+        return new Color(data.reductionValue, data.isBlackout, 0, 0);
     }
 
     private void UploadToTexture()
@@ -453,14 +541,33 @@ public class BuildingManager : MonoBehaviour
         if (renderTexture == null || cachedRenderData == null) return;
 
         int total = TexWidth * _texHeight;
-        Color[] pixels = new Color[total];
+        EnsurePixelBuffer(total);
+
         for (int i = 0; i < cachedRenderData.Length; i++)
+            _pixelUploadBuffer[i] = PackBuildingPixel(cachedRenderData[i]);
+
+        for (int i = cachedRenderData.Length; i < total; i++)
+            _pixelUploadBuffer[i] = Color.clear;
+
+        renderTexture.SetPixels(_pixelUploadBuffer);
+        renderTexture.Apply(false);
+    }
+
+    private void UploadIndicesToTexture(IReadOnlyList<int> indices)
+    {
+        if (renderTexture == null || cachedRenderData == null || indices == null) return;
+
+        for (int k = 0; k < indices.Count; k++)
         {
-            pixels[i] = new Color(cachedRenderData[i].reductionValue,
-                                  cachedRenderData[i].isBlackout, 0, 0);
+            int i = indices[k];
+            if ((uint)i >= (uint)cachedRenderData.Length) continue;
+
+            int x = i % TexWidth;
+            int y = i / TexWidth;
+            renderTexture.SetPixel(x, y, PackBuildingPixel(cachedRenderData[i]));
         }
-        renderTexture.SetPixels(pixels);
-        renderTexture.Apply();
+
+        renderTexture.Apply(false);
     }
 
     /// <summary>
@@ -504,6 +611,15 @@ public class BuildingManager : MonoBehaviour
             return;
 
         UploadToTexture();
+        bufferDirty = false;
+    }
+
+    private void FlushChangedIndicesToGPU(IReadOnlyList<int> indices)
+    {
+        if (indices == null || indices.Count == 0 || cachedRenderData == null || renderTexture == null)
+            return;
+
+        UploadIndicesToTexture(indices);
         bufferDirty = false;
     }
     #endregion
@@ -550,15 +666,34 @@ public class BuildingManager : MonoBehaviour
         if (districtRanges.Count == 0) return;
 
         foreach (var kvp in districtRanges)
-        {
             BuildSortedIndices(kvp.Key, kvp.Value.start, kvp.Value.count);
-        }
+    }
+
+    public void RebuildSortedIndicesForDistrict(int districtId)
+    {
+        if (districtRanges.TryGetValue(districtId, out var range))
+            BuildSortedIndices(districtId, range.start, range.count);
     }
 
     private void HandleActiveDistrictsChanged(DistrictType current, DistrictType next)
     {
         _selectedDistrict = current;
+        StartCoroutine(ActivateSimulationDistricts(current, next));
+    }
 
+    private IEnumerator ActivateSimulationDistricts(DistrictType current, DistrictType next)
+    {
+        if (next != DistrictType.None)
+            yield return EnsureDistrictMeshesReady(current, next);
+        else
+            yield return EnsureDistrictMeshesReady(current);
+
+        ApplyDistrictVisibility(current, next);
+        WebGLMemoryDiagnostics.LogSnapshot($"sim-districts-{current}", this);
+    }
+
+    private void ApplyDistrictVisibility(DistrictType current, DistrictType next)
+    {
         foreach (var (id, root) in districtRoots)
         {
             bool isActive = id == (int)current ||
@@ -572,10 +707,18 @@ public class BuildingManager : MonoBehaviour
         if (_isSimulationActive) return;
 
         _selectedDistrict = districtType;
+        StartCoroutine(ActivateSelectedDistrict(districtType));
+    }
+
+    private IEnumerator ActivateSelectedDistrict(DistrictType districtType)
+    {
+        yield return EnsureDistrictMeshesReady(districtType);
 
         int selectedId = (int)districtType;
         foreach (var (id, root) in districtRoots)
             root.SetActive(id == selectedId);
+
+        WebGLMemoryDiagnostics.LogSnapshot($"selected-{districtType}", this);
     }
 
     private void HandleBlackoutSimulationStart(bool isOn)
@@ -606,30 +749,47 @@ public class BuildingManager : MonoBehaviour
         if (!sortedDistrictIndices.TryGetValue(districtId, out var sortedIndices)) return;
 
         if (blackoutCoroutine != null) StopCoroutine(blackoutCoroutine);
+        RebuildSortedIndicesForDistrict(districtId);
+        WebGLMemoryDiagnostics.LogSnapshot($"blackout-start-{districtType}", this);
         blackoutCoroutine = StartCoroutine(BlackoutSequence(districtType, sortedIndices));
     }
 
     IEnumerator BlackoutSequence(DistrictType districtType, int[] sortedIndices)
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        const int applyEveryNBatches = 3;
+        int batchCounter = 0;
+#endif
         // ── 1단계: 정전 ──
         for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
         {
             int end = Mathf.Min(i + buildingsPerBatch, sortedIndices.Length);
+            _batchChangedIndices.Clear();
 
             for (int j = i; j < end; j++)
             {
-                if (cachedRenderData[sortedIndices[j]].reductionValue <= 0f) continue;  // 추가
-                cachedRenderData[sortedIndices[j]].isBlackout = 1;
+                int idx = sortedIndices[j];
+                if (cachedRenderData[idx].reductionValue <= 0f) continue;
+                cachedRenderData[idx].isBlackout = 1;
+                _batchChangedIndices.Add(idx);
             }
 
-            MarkBufferDirty();
-            FlushBufferToGPU();
+#if UNITY_WEBGL && !UNITY_EDITOR
+            batchCounter++;
+            if (_batchChangedIndices.Count > 0 &&
+                (batchCounter % applyEveryNBatches == 0 || end >= sortedIndices.Length))
+                FlushChangedIndicesToGPU(_batchChangedIndices);
+#else
+            FlushChangedIndicesToGPU(_batchChangedIndices);
+#endif
 
             yield return new WaitForSeconds(secondsBetweenBatch);
         }
 
+        FlushChangedIndicesToGPU(CollectBlackoutIndices(sortedIndices, 1));
         simulationController.NotifyDistrictBlackoutComplete(districtType);
         Debug.Log($"[BuildingManager] 구역 정전 연출 완료 — {blackoutHoldDuration}초 유지 후 복전");
+        WebGLMemoryDiagnostics.LogSnapshot($"blackout-complete-{districtType}", this);
 
         // ── 2단계: 정전 유지 ──
         yield return new WaitForSeconds(blackoutHoldDuration);
@@ -637,25 +797,52 @@ public class BuildingManager : MonoBehaviour
         simulationController.NotifyDistrictRestoreStarted(districtType);
 
         // ── 3단계: 복전 (배치 단위로 순차 복원) ──
+#if UNITY_WEBGL && !UNITY_EDITOR
+        batchCounter = 0;
+#endif
         for (int i = 0; i < sortedIndices.Length; i += buildingsPerBatch)
         {
             int end = Mathf.Min(i + buildingsPerBatch, sortedIndices.Length);
+            _batchChangedIndices.Clear();
 
             for (int j = i; j < end; j++)
             {
-                if (cachedRenderData[sortedIndices[j]].reductionValue <= 0f) continue;  // 추가
-                cachedRenderData[sortedIndices[j]].isBlackout = 0;
+                int idx = sortedIndices[j];
+                if (cachedRenderData[idx].reductionValue <= 0f) continue;
+                cachedRenderData[idx].isBlackout = 0;
+                _batchChangedIndices.Add(idx);
             }
 
-            MarkBufferDirty();
-            FlushBufferToGPU();
+#if UNITY_WEBGL && !UNITY_EDITOR
+            batchCounter++;
+            if (_batchChangedIndices.Count > 0 &&
+                (batchCounter % applyEveryNBatches == 0 || end >= sortedIndices.Length))
+                FlushChangedIndicesToGPU(_batchChangedIndices);
+#else
+            FlushChangedIndicesToGPU(_batchChangedIndices);
+#endif
 
             yield return new WaitForSeconds(secondsBetweenRestoreBatch);
         }
 
+        FlushChangedIndicesToGPU(CollectBlackoutIndices(sortedIndices, 0));
         simulationController.NotifyDistrictRestoreComplete(districtType);
         Debug.Log("[BuildingManager] 구역 복전 완료 → 다음 구로 이동");
+        WebGLMemoryDiagnostics.LogSnapshot($"restore-complete-{districtType}", this);
         blackoutCoroutine = null;
+    }
+
+    private List<int> CollectBlackoutIndices(int[] sortedIndices, int blackoutValue)
+    {
+        _batchChangedIndices.Clear();
+        for (int i = 0; i < sortedIndices.Length; i++)
+        {
+            int idx = sortedIndices[i];
+            if (cachedRenderData[idx].reductionValue <= 0f) continue;
+            if (cachedRenderData[idx].isBlackout == blackoutValue)
+                _batchChangedIndices.Add(idx);
+        }
+        return _batchChangedIndices;
     }
 
     private void ResetAllBlackoutStates()

@@ -111,6 +111,7 @@ public class BlackoutSimulationController : MonoBehaviour
 
             OnActiveDistrictsChanged?.Invoke(current, next);
             OnBlackoutDistrictChanged?.Invoke(current);
+            WebGLMemoryDiagnostics.LogSnapshot($"sim-step-{i + 1}-{current}");
 
             double consumption = _guConsumption.TryGetValue(current, out double v) ? v : 0.0;
             _waitingForFinish = true;
@@ -120,6 +121,7 @@ public class BlackoutSimulationController : MonoBehaviour
         }
 
         Debug.Log("[BlackoutSimulationController] 시뮬레이션 완료");
+        WebGLMemoryDiagnostics.LogSnapshot("simulation-complete");
         _simulationCoroutine = null;
         // LogEventBridge.HandleSimulationCompleted()가 _simulationCompletedNaturally를 먼저 true로 세팅한 뒤
         // RequestToggle(false) → HandleSimulationToggled(false)가 호출되어야 "중단" 로그가 찍히지 않는다.
