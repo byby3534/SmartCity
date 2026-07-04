@@ -141,7 +141,7 @@ public class UIController : MonoBehaviour
         {
             oniSlider.minValue = min;
             oniSlider.maxValue = max;
-            oniSlider.value = oniValue;
+            oniSlider.SetValueWithoutNotify(oniValue);
             UpdateOniDisplay(oniValue);
         }
 
