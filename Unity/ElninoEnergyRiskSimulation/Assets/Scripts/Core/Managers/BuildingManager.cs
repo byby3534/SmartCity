@@ -145,6 +145,10 @@ public class BuildingManager : MonoBehaviour
 
     private void Awake()
     {
+        // 공유 .mat 에셋에 SetFloat/SetTexture 하면 Play 종료 후 파일이 더티해진다.
+        if (buildingMaterial != null)
+            buildingMaterial = new Material(buildingMaterial);
+
         SceneRefs.Resolve(ref districtManager);
         SceneRefs.Resolve(ref simulationController);
         SceneRefs.Resolve(ref minimapManager);
