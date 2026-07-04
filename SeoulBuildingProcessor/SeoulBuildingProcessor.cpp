@@ -1,3 +1,6 @@
+#ifdef _MSC_VER
+#include "pch.h"
+#endif
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
@@ -166,33 +169,35 @@ extern "C" {
 		chunkVertices.clear();
 		chunkIndices.clear();
 
-		int districtBuildingIndex = 0; // 지형 높이 배열과 매칭하기 위한 인덱스
-
 		const double LAT_TO_METER = 111320.0;
 		const double LON_TO_METER = 111319.5 * cos(centerLat * 3.14159265359 / 180.0);
 
-		for (size_t bufferPos = 0; bufferPos < buildingBuffer.size(); bufferPos++) {
-			auto& building = buildingBuffer[bufferPos];
+		auto it = districtRanges.find(districtId);
+		if (it == districtRanges.end()) return;
 
-			// 해당 구역이 아닌 건물은 스킵
-			if (building.districtId != districtId)
-			{
-				continue;
-			}
+		int rangeStart = it->second.first;
+		int rangeCount = it->second.second;
+
+		// 구 건물 수 기반으로 예상 크기 미리 확보 (벽 2n + 지붕 n = 3n, 평균 n≈6 기준)
+		chunkVertices.reserve(rangeCount * 18);
+		chunkIndices.reserve(rangeCount * 30);
+
+		for (int i = 0; i < rangeCount; i++) {
+			size_t bufferPos = rangeStart + i;
+			auto& building = buildingBuffer[bufferPos];
 
 			// ★ GPU 버퍼(_BuildingRenderBuffer)는 renderingBuffer 위치(=buildingBuffer 로드 순서) 기준으로 정렬되어 있으므로,
 			//   정점에는 building.id(원본 고유번호)가 아니라 실제 배열 위치(bufferPos)를 심어야 한다.
 			float renderBufferIndex = (float)bufferPos;
 
 			// 1. 배열에서 고도를 읽어와서 건물의 지형 높이로 설정하고 건물의 baseZ와 topZ 계산
-			float sampleHeight = (districtBuildingIndex < terrainArrayLength) ? terrainHeights[districtBuildingIndex] : 0.0f;
-			building.terrainAltitude = sampleHeight; // Ceisum에서 측정한 지형 높이 저장
+			float sampleHeight = (i < terrainArrayLength) ? terrainHeights[i] : 0.0f;
+			building.terrainAltitude = sampleHeight;
 			float skirtDepth = 10.0f;
 			float baseZ = sampleHeight - skirtDepth;
 
 			float adjustedHeight = (building.height < 5.0f) ? 5.0f : building.height;
 			float topZ = sampleHeight + adjustedHeight;
-			districtBuildingIndex++;
 
 			// 2. 해당 건물의 폴리곤 좌표 추출
 			std::vector<std::pair<double, double>> polygon;
@@ -225,28 +230,45 @@ extern "C" {
 			}
 			bool isCCW = (area > 0);
 
-			int vertexOffset = chunkVertices.size();
+			// 3. 벽면 생성 — 코너에서 인접 면 법선을 평균하여 C# RecalculateNormals() 대체
+			int wallBase = (int)chunkVertices.size();
 
-			// 3. 벽면 생성
+			// 각 엣지의 외향 법선 계산 (XZ 평면, Y=0)
+			std::vector<float> faceNx(n), faceNz(n);
 			for (int i = 0; i < n; i++) {
 				int next = (i + 1) % n;
+				double dx = polygon[next].first  - polygon[i].first;
+				double dz = polygon[next].second - polygon[i].second;
+				double len = sqrt(dx * dx + dz * dz);
+				if (len < 1e-10) { faceNx[i] = 0; faceNz[i] = 0; continue; }
+				// CCW: 오른쪽이 바깥 → (dz, -dx) / CW: 왼쪽이 바깥 → (-dz, dx)
+				if (isCCW) { faceNx[i] = (float)(dz / len);  faceNz[i] = (float)(-dx / len); }
+				else        { faceNx[i] = (float)(-dz / len); faceNz[i] = (float)(dx / len);  }
+			}
 
-				NativeVertex b0 = { (float)polygon[i].first, baseZ, (float)polygon[i].second, 0,0,0, renderBufferIndex };
-				NativeVertex b1 = { (float)polygon[next].first, baseZ, (float)polygon[next].second, 0,0,0, renderBufferIndex };
-				NativeVertex t0 = { (float)polygon[i].first, topZ, (float)polygon[i].second, 0,0,0, renderBufferIndex };
-				NativeVertex t1 = { (float)polygon[next].first, topZ, (float)polygon[next].second, 0,0,0, renderBufferIndex };
+			// ② 꼭짓점마다 인접 두 엣지 법선 평균 → bottom/top 쌍 생성 (2n개)
+			for (int i = 0; i < n; i++) {
+				int prev = (i - 1 + n) % n;
+				float nx = faceNx[prev] + faceNx[i];
+				float nz = faceNz[prev] + faceNz[i];
+				float vlen = sqrtf(nx * nx + nz * nz);
+				if (vlen > 1e-10f) { nx /= vlen; nz /= vlen; }
 
-				int idx = (int)chunkVertices.size();
-				chunkVertices.push_back(b0);
-				chunkVertices.push_back(b1);
-				chunkVertices.push_back(t0);
-				chunkVertices.push_back(t1);
+				chunkVertices.push_back({ (float)polygon[i].first, baseZ, (float)polygon[i].second, nx, 0, nz, renderBufferIndex });
+				chunkVertices.push_back({ (float)polygon[i].first, topZ,  (float)polygon[i].second, nx, 0, nz, renderBufferIndex });
+			}
 
+			// ③ 인덱스로 엣지마다 쿼드(삼각형 2개) 구성
+			for (int i = 0; i < n; i++) {
+				int next = (i + 1) % n;
+				int b0 = wallBase + i    * 2;
+				int t0 = wallBase + i    * 2 + 1;
+				int b1 = wallBase + next * 2;
+				int t1 = wallBase + next * 2 + 1;
 				if (isCCW) {
-					chunkIndices.insert(chunkIndices.end(), { idx, idx + 2, idx + 1, idx + 1, idx + 2, idx + 3 });
-				}
-				else {
-					chunkIndices.insert(chunkIndices.end(), { idx + 1, idx + 3, idx, idx, idx + 3, idx + 2 });
+					chunkIndices.insert(chunkIndices.end(), { b0, t0, b1, b1, t0, t1 });
+				} else {
+					chunkIndices.insert(chunkIndices.end(), { b1, t1, b0, b0, t1, t0 });
 				}
 			}
 
@@ -318,11 +340,8 @@ extern "C" {
 	}
 
 	DllExport int GetDistrictBuildingCount(int districtId) {
-		int count = 0;
-		for (auto& b : buildingBuffer) {
-			if (b.districtId == districtId) count++;
-		}
-		return count;
+		auto it = districtRanges.find(districtId);
+		return (it != districtRanges.end()) ? it->second.second : 0;
 	}
 
 	// 위경도 데이터를 배열로 복사해서 넘겨주기
