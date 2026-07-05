@@ -3,9 +3,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+
+[StructLayout(LayoutKind.Sequential)]
+struct BuildingVertex
+{
+    public Vector3 position;
+    public Vector3 normal;
+    public Vector2 uv2;
+}
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct NativeBuildingData
@@ -45,7 +55,6 @@ public struct NativeVertex
 
 public class BuildingManager : MonoBehaviour
 {
-    public Cesium3DTileset terrainTileset;
     public CesiumGeoreference cesiumGeoreference;
     public Material buildingMaterial;
     // private ComputeBuffer renderBuffer;
@@ -69,6 +78,9 @@ public class BuildingManager : MonoBehaviour
 
     private Dictionary<int, int[]> sortedDistrictIndices = new();
     private Dictionary<int, GameObject> districtRoots = new();
+
+    private readonly Mesh[] _meshPool = new Mesh[2];
+    private int _meshPoolNext = 0;
 
     private Coroutine blackoutCoroutine;
 
@@ -170,19 +182,22 @@ public class BuildingManager : MonoBehaviour
     private void Start()
     {
         ClearAllNativeData();
-
         Debug.Log("[CityManager] Start() - 구역별 건물 데이터 로드 및 메쉬 생성 시작...");
-        // PloygonData 고속 로드
-        LoadGlobalPolygonBinaryFast();
+        StartCoroutine(InitializeAsync());
+    }
 
-        // 서울시 25개 구별 건물 데이터(.bytes) 고속 로드
+    private IEnumerator InitializeAsync()
+    {
+        LoadGlobalPolygonBinaryFast();
+        yield return null;
+
         foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
         {
             if (district == DistrictType.None) continue;
             LoadDistrictBinaryFast((int)district);
+            yield return null; // GC 실행 기회 확보
         }
 
-        // 모든 건물 데이터 로드 후 렌더링 버퍼 구축
         BuildRenderingBuffer();
         InitializeRenderBuffer();
         BuildingDistrictIndexMap();
@@ -226,11 +241,9 @@ public class BuildingManager : MonoBehaviour
 
     IEnumerator SpawnDefaultDistrict()
     {
-        while (terrainTileset == null || !terrainTileset.enabled)
-            yield return null;
-
         yield return new WaitForSeconds(2.0f);
         yield return SpawnDistrictAsync((int)DistrictType.JONGNO);
+
         WebGLMemoryDiagnostics.LogSnapshot("lazy-default-district", this);
         Debug.Log("[BuildingManager] 기본 구(종로) 메시 준비 완료.");
     }
@@ -267,6 +280,8 @@ public class BuildingManager : MonoBehaviour
         {
             if (handle.IsAllocated) handle.Free();
         }
+
+        Resources.UnloadAsset(binFile);
     }
 
     private void LoadGlobalPolygonBinaryFast()
@@ -284,11 +299,39 @@ public class BuildingManager : MonoBehaviour
         {
             if (handle.IsAllocated) handle.Free();
         }
+
+        Resources.UnloadAsset(polyFile);
+    }
+
+    public int GetBuildingCount() => GetBuildingBufferCount();
+
+    /// <summary>
+    /// native 버퍼에서 districtType/buildingType만 직접 읽어 채운다.
+    /// NativeBuildingData[] 전체 복사(~20MB) 없이 필요한 2 필드만 추출.
+    /// </summary>
+    public unsafe void FillBuildingTypeMappings(int[] districtTypes, int[] buildingTypes)
+    {
+        int count = GetBuildingBufferCount();
+        if (count == 0) return;
+
+        IntPtr ptr = GetBuildingBufferPointer();
+        int stride = Marshal.SizeOf<NativeBuildingData>();
+        int dtOffset = (int)Marshal.OffsetOf<NativeBuildingData>(nameof(NativeBuildingData.districtType));
+        int btOffset = (int)Marshal.OffsetOf<NativeBuildingData>(nameof(NativeBuildingData.buildingType));
+
+        byte* basePtr = (byte*)ptr.ToPointer();
+        for (int i = 0; i < count; i++)
+        {
+            byte* item = basePtr + i * stride;
+            districtTypes[i] = *(int*)(item + dtOffset);
+            buildingTypes[i] = *(int*)(item + btOffset);
+        }
     }
 
     /// <summary>
-    /// 전체 건물의 NativeBuildingData를 읽어온다 (구/건물유형 매핑용).
-    /// 렌더링과는 무관하며, DistrictManager가 reductionValue 계산 시 참조.
+    /// 전체 건물의 NativeBuildingData를 읽어온다.
+    /// 메모리 부담이 크므로 빌드 툴 등 에디터 전용으로만 사용할 것.
+    /// 런타임 매핑은 FillBuildingTypeMappings()를 사용.
     /// </summary>
     public NativeBuildingData[] GetFullBuildingData()
     {
@@ -313,29 +356,66 @@ public class BuildingManager : MonoBehaviour
 
     private IEnumerator SpawnDistrictAsync(int districtId)
     {
-        // 1. TerrainHeights 로드
-        TextAsset heightFile = Resources.Load<TextAsset>($"Districts/{districtId}/TerrainHeights");
-        if (heightFile == null)
+        WebGLMemoryDiagnostics.LogSnapshot($"spawn[{districtId}]-A:start", this);
+
+        NativeArray<float> heights = LoadHeightsToNative(districtId);
+        if (!heights.IsCreated)
         {
             Debug.LogError($"[BuildingManager] {districtId}: TerrainHeights 없음. 'Tools > Bake Terrain Heights' 를 먼저 실행하세요.");
             yield break;
         }
 
-        float[] heights = new float[heightFile.bytes.Length / sizeof(float)];
-        Buffer.BlockCopy(heightFile.bytes, 0, heights, 0, heightFile.bytes.Length);
+        WebGLMemoryDiagnostics.LogSnapshot($"spawn[{districtId}]-C:after-heights", this);
+
+        Vector2 centerCoord = DistrictCoordinates.GetCenter(districtId);
+        CallBuildDistrictMesh(districtId, heights, centerCoord.x, centerCoord.y);
+        heights.Dispose();
+
+        WebGLMemoryDiagnostics.LogSnapshot($"spawn[{districtId}]-D:after-builddist", this);
+
         yield return null;
 
-        // 2. C++ DLL로 fullMesh 생성
-        Mesh fullMesh = BuildAndGetDistrictMesh(districtId, heights);
+        Mesh fullMesh = ExtractChunkMesh();
         if (fullMesh == null)
         {
             Debug.LogError($"[BuildingManager] {districtId}: 메시 빌드 실패.");
             yield break;
         }
+
+        WebGLMemoryDiagnostics.LogSnapshot($"spawn[{districtId}]-E:after-extract", this);
+
         yield return null;
 
-        // 3. GameObject 생성
         SpawnDistrictObject(districtId, fullMesh);
+
+        WebGLMemoryDiagnostics.LogSnapshot($"spawn[{districtId}]-F:after-spawn", this);
+    }
+
+    private NativeArray<float> LoadHeightsToNative(int id)
+    {
+        TextAsset file = Resources.Load<TextAsset>($"Districts/{id}/TerrainHeights");
+        if (file == null) return default;
+
+        byte[] raw = file.bytes;
+        Resources.UnloadAsset(file);
+
+        int floatCount = raw.Length / sizeof(float);
+        // Temp: 같은 프레임 내(yield 전)에 Dispose하므로 단편화 없는 스택 할당 사용
+        NativeArray<float> native = new NativeArray<float>(floatCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+        CopyBytesToNativeArray(raw, native);
+        return native;
+    }
+
+    private static unsafe void CopyBytesToNativeArray(byte[] src, NativeArray<float> dst)
+    {
+        fixed (byte* p = src)
+            UnsafeUtility.MemCpy(dst.GetUnsafePtr(), p, src.Length);
+    }
+
+    private static unsafe void CallBuildDistrictMesh(int districtId, NativeArray<float> heights, double centerLon, double centerLat)
+    {
+        void* ptr = NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(heights);
+        BuildDistrictMesh(districtId, (IntPtr)ptr, heights.Length, centerLon, centerLat);
     }
 
     private void SpawnDistrictObject(int districtId, Mesh mesh)
@@ -355,14 +435,14 @@ public class BuildingManager : MonoBehaviour
         districtObject.data = new DistrictData();
         OnDistrictObjectCreated?.Invoke(districtObject);
 
-        districtRoot.AddComponent<MeshFilter>().mesh = mesh;
+        districtRoot.AddComponent<MeshFilter>().sharedMesh = mesh;
         MeshRenderer r = districtRoot.AddComponent<MeshRenderer>();
         r.sharedMaterial = buildingMaterial;
         r.renderingLayerMask = RenderingLayerMask.GetMask("BUILDING");
         r.shadowCastingMode = ShadowCastingMode.Off;
         r.receiveShadows = false;
 
-        Debug.Log($"[BuildingManager] 구 {districtId} 메시 생성 — verts={mesh.vertexCount:N0} tris={mesh.triangles.Length / 3:N0}");
+        Debug.Log($"[BuildingManager] 구 {districtId} 메시 생성 — verts={mesh.vertexCount:N0} tris={mesh.GetIndexCount(0) / 3:N0}");
     }
 
     /// <summary>
@@ -408,28 +488,52 @@ public class BuildingManager : MonoBehaviour
         int iCount = GetChunkIndexCount();
         if (vCount == 0 || iCount == 0) return null;
 
-        float[] rawVertices = new float[vCount * 7];
-        Marshal.Copy(GetChunkVertices(), rawVertices, 0, vCount * 7);
+        int slot = _meshPoolNext;
+        _meshPoolNext = 1 - _meshPoolNext;
+        if (_meshPool[slot] == null)
+            _meshPool[slot] = new Mesh { indexFormat = IndexFormat.UInt32 };
+        Mesh mesh = _meshPool[slot];
 
-        int[] indices = new int[iCount];
-        Marshal.Copy(GetChunkIndices(), indices, 0, iCount);
+        Mesh.MeshDataArray dataArray = Mesh.AllocateWritableMeshData(1);
+        Mesh.MeshData data = dataArray[0];
 
-        Vector3[] verts   = new Vector3[vCount];
-        Vector3[] normals = new Vector3[vCount];
-        Vector2[] uv2     = new Vector2[vCount];
-        for (int i = 0; i < vCount; i++)
+        data.SetVertexBufferParams(vCount,
+            new VertexAttributeDescriptor(VertexAttribute.Position,  VertexAttributeFormat.Float32, 3),
+            new VertexAttributeDescriptor(VertexAttribute.Normal,    VertexAttributeFormat.Float32, 3),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 2));
+        data.SetIndexBufferParams(iCount, IndexFormat.UInt32);
+
+        NativeArray<BuildingVertex> vertexBuffer = data.GetVertexData<BuildingVertex>();
+        unsafe
         {
-            int o = i * 7;
-            verts[i]   = new Vector3(rawVertices[o],     rawVertices[o + 1], rawVertices[o + 2]);
-            normals[i] = new Vector3(rawVertices[o + 3], rawVertices[o + 4], rawVertices[o + 5]);
-            uv2[i]     = new Vector2(rawVertices[o + 6], 0);
+            float* src = (float*)GetChunkVertices().ToPointer();
+            for (int i = 0; i < vCount; i++)
+            {
+                int o = i * 7;
+                vertexBuffer[i] = new BuildingVertex
+                {
+                    position = new Vector3(src[o],     src[o + 1], src[o + 2]),
+                    normal   = new Vector3(src[o + 3], src[o + 4], src[o + 5]),
+                    uv2      = new Vector2(src[o + 6], 0f)
+                };
+            }
         }
 
-        Mesh mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
-        mesh.vertices  = verts;
-        mesh.normals   = normals;
-        mesh.uv2       = uv2;
-        mesh.triangles = indices;
+        NativeArray<int> indexBuffer = data.GetIndexData<int>();
+        unsafe
+        {
+            void* dst = indexBuffer.GetUnsafePtr();
+            void* src = GetChunkIndices().ToPointer();
+            UnsafeUtility.MemCpy(dst, src, (long)iCount * sizeof(int));
+        }
+
+        data.subMeshCount = 1;
+        data.SetSubMesh(0, new SubMeshDescriptor(0, iCount));
+
+        Mesh.ApplyAndDisposeWritableMeshData(dataArray, mesh,
+            MeshUpdateFlags.DontRecalculateBounds |
+            MeshUpdateFlags.DontValidateIndices   |
+            MeshUpdateFlags.DontNotifyMeshUsers);
         mesh.RecalculateBounds();
         return mesh;
     }
@@ -567,7 +671,10 @@ public class BuildingManager : MonoBehaviour
             if (GetDistrictRange(districtId, out int start, out int count))
                 districtRanges[districtId] = (start, count);
         }
+#if !(UNITY_WEBGL && !UNITY_EDITOR)
+        // WebGL: reductionValue 데이터 도착 전 정렬은 무의미. HandleFlyEndToStart()에서 lazy sort.
         RebuildSortedIndices();
+#endif
     }
 
     private void SortDistrictByReduction(int districtId)
@@ -591,14 +698,44 @@ public class BuildingManager : MonoBehaviour
         SortDistrictByReduction((int)district);
     #endregion
 
+    private void DestroyDistrictRoot(GameObject root)
+    {
+        if (root == null) return;
+        var mf = root.GetComponent<MeshFilter>();
+        if (mf != null && mf.sharedMesh != null
+            && mf.sharedMesh != _meshPool[0]
+            && mf.sharedMesh != _meshPool[1])
+            Destroy(mf.sharedMesh);
+        Destroy(root);
+    }
+
     #region DistrictActivation
 
     private void HandleDistrictSelected(DistrictType districtType)
     {
         if (_isSimulationActive) return;
         _selectedDistrict = districtType;
-        if (_activationCoroutine != null) StopCoroutine(_activationCoroutine);
+        if (_activationCoroutine != null)
+        {
+            StopCoroutine(_activationCoroutine);
+            DestroyAllDistrictsExcept(-1);
+            // 코루틴이 중단되면 ActivateAndMoveToDistrict의 후반부 GC/Unload가 실행 안 됨 → 여기서 보완
+            System.GC.Collect();
+            StartCoroutine(UnloadUnusedAsync());
+        }
         _activationCoroutine = StartCoroutine(ActivateAndMoveToDistrict(districtType));
+    }
+
+    private void DestroyAllDistrictsExcept(int keepId)
+    {
+        var toDestroy = new List<int>();
+        foreach (var (id, _) in districtRoots)
+            if (id != keepId) toDestroy.Add(id);
+        foreach (int id in toDestroy)
+        {
+            DestroyDistrictRoot(districtRoots[id]);
+            districtRoots.Remove(id);
+        }
     }
 
     private IEnumerator ActivateAndMoveToDistrict(DistrictType districtType)
@@ -607,21 +744,19 @@ public class BuildingManager : MonoBehaviour
         if (!districtRoots.ContainsKey((int)districtType))
             yield return SpawnDistrictAsync((int)districtType);
 
-        // 2. 카메라 이동 시작
+        // 2. 카메라 이동
         mainCameraController.MoveToDistrict(districtType);
 
         // 3. 이동 완료 대기
         yield return new WaitUntil(() => !mainCameraController.IsFlying);
+        yield return new WaitForSeconds(0.3f);
 
         // 4. 이전 구 파괴
-        var toDestroy = new List<int>();
-        foreach (var (id, _) in districtRoots)
-            if (id != (int)districtType) toDestroy.Add(id);
-        foreach (int id in toDestroy)
-        {
-            Destroy(districtRoots[id]);
-            districtRoots.Remove(id);
-        }
+        DestroyAllDistrictsExcept((int)districtType);
+
+        yield return Resources.UnloadUnusedAssets();
+        System.GC.Collect();
+        yield return null;
 
         WebGLMemoryDiagnostics.LogSnapshot($"activate-{districtType}", this);
     }
@@ -629,8 +764,19 @@ public class BuildingManager : MonoBehaviour
     private void HandleActiveDistrictsChanged(DistrictType current, DistrictType next)
     {
         _selectedDistrict = current;
-        if (_activationCoroutine != null) StopCoroutine(_activationCoroutine);
+        if (_activationCoroutine != null)
+        {
+            StopCoroutine(_activationCoroutine);
+            DestroyAllDistrictsExcept(-1);
+            System.GC.Collect();
+            StartCoroutine(UnloadUnusedAsync());
+        }
         _activationCoroutine = StartCoroutine(ActivateDistricts(current, next));
+    }
+
+    private IEnumerator UnloadUnusedAsync()
+    {
+        yield return Resources.UnloadUnusedAssets();
     }
 
     private IEnumerator ActivateDistricts(DistrictType current, DistrictType next = DistrictType.None)
@@ -649,9 +795,13 @@ public class BuildingManager : MonoBehaviour
 
         foreach (int id in toDestroy)
         {
-            Destroy(districtRoots[id]);
+            DestroyDistrictRoot(districtRoots[id]);
             districtRoots.Remove(id);
         }
+
+        yield return Resources.UnloadUnusedAssets();
+        System.GC.Collect();
+        yield return null;
 
         WebGLMemoryDiagnostics.LogSnapshot($"activate-{current}", this);
     }
@@ -778,8 +928,8 @@ public class BuildingManager : MonoBehaviour
     void OnDestroy()
     {
         if (renderTexture != null)
-        {
             Destroy(renderTexture);
-        }
+        foreach (var m in _meshPool)
+            if (m != null) Destroy(m);
     }
 }

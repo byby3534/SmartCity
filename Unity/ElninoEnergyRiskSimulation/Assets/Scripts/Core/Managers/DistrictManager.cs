@@ -76,30 +76,25 @@ public class DistrictManager : MonoBehaviour
     }
 
     /// <summary>
-    /// CityManager에서 전체 NativeBuildingData를 한 번 읽어와
     /// 인덱스별 districtType/buildingType 배열을 만든다.
-    /// 렌더링 버퍼(BuildingRenderData)에는 이 정보가 없으므로 여기서 매핑.
+    /// GetFullBuildingData()로 NativeBuildingData[] 전체를 복사하지 않고
+    /// FillBuildingTypeMappings()로 필요한 2 필드만 직접 읽어 ~20MB 절감.
     /// </summary>
     private void BuildBuildingTypeMapping()
     {
-        NativeBuildingData[] fullData = buildingManager.GetFullBuildingData();
+        int count = buildingManager.GetBuildingCount();
 
-        if (fullData.Length < 0)
+        if (count == 0)
         {
             Debug.LogWarning("[DistrictManager] 전체 건물 데이터가 비어있습니다. 매핑 테이블을 구축할 수 없습니다.");
             return;
         }
 
-        buildingDistrictTypes = new int[fullData.Length];
-        buildingBuildingTypes = new int[fullData.Length];
+        buildingDistrictTypes = new int[count];
+        buildingBuildingTypes = new int[count];
+        buildingManager.FillBuildingTypeMappings(buildingDistrictTypes, buildingBuildingTypes);
 
-        for (int i = 0; i < fullData.Length; i++)
-        {
-            buildingDistrictTypes[i] = fullData[i].districtType;
-            buildingBuildingTypes[i] = fullData[i].buildingType;
-        }
-
-        Debug.Log($"[DistrictManager] 건물 매핑 테이블 구축 완료 ({fullData.Length}개)");
+        Debug.Log($"[DistrictManager] 건물 매핑 테이블 구축 완료 ({count}개)");
     }
 
     // ── DataManager 이벤트 핸들러 ──

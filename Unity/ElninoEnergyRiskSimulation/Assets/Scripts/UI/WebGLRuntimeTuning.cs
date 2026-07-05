@@ -76,8 +76,8 @@ public static class WebGLRuntimeTuning
             if (tileset.maximumScreenSpaceError < 48f)
                 tileset.maximumScreenSpaceError = 48f;
 
-            if (tileset.maximumCachedBytes > 128L * 1024 * 1024)
-                tileset.maximumCachedBytes = 128L * 1024 * 1024;
+            if (tileset.maximumCachedBytes > 64L * 1024 * 1024)
+                tileset.maximumCachedBytes = 64L * 1024 * 1024;
 
             if (tileset.maximumSimultaneousTileLoads > 8)
                 tileset.maximumSimultaneousTileLoads = 8;

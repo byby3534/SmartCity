@@ -34,6 +34,7 @@ public class GuBoundaryDecal : MonoBehaviour
 
     private Material _decalMatInstance;
     private Texture2D _texture;
+    private Color[] _pixelBuffer; // RebuildTexture 호출마다 256MB 재할당 방지
     private string _selectedDistrict;
 
     private double _minLon, _maxLon, _minLat, _maxLat;
@@ -187,7 +188,12 @@ public class GuBoundaryDecal : MonoBehaviour
         float widthM  = (float)(lonRange * lonScale);
         float heightM = (float)(latRange * LatScale);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // WebGL: 4096(256MB 배열)은 힙 초과. 경계선 데칼은 1024으로 충분.
+        int res = Mathf.Min(textureResolution, 1024);
+#else
         int res = textureResolution;
+#endif
         _texture = new Texture2D(res, res, TextureFormat.RGBA32, false);
         _texture.wrapMode = TextureWrapMode.Clamp;
         _texture.filterMode = FilterMode.Bilinear;
@@ -244,7 +250,12 @@ public class GuBoundaryDecal : MonoBehaviour
         if (_texture == null) return;
 
         int res = _texture.width;
-        var pixels = new Color[res * res];
+        int pixelCount = res * res;
+        if (_pixelBuffer == null || _pixelBuffer.Length != pixelCount)
+            _pixelBuffer = new Color[pixelCount];
+        else
+            System.Array.Clear(_pixelBuffer, 0, pixelCount);
+        var pixels = _pixelBuffer;
 
         if (ShouldShowSelectionFill())
         {

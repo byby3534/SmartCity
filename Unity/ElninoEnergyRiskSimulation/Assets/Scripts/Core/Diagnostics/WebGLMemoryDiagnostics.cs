@@ -25,7 +25,7 @@ public static class WebGLMemoryDiagnostics
 
             meshCount++;
             totalVerts += mesh.vertexCount;
-            totalTris += mesh.triangles.Length / 3;
+            totalTris += (long)mesh.GetIndexCount(0) / 3;
             meshBytes += EstimateMeshBytes(mesh);
 
             if (filter.gameObject.activeInHierarchy)
@@ -42,6 +42,7 @@ public static class WebGLMemoryDiagnostics
             sb.Append(' ').Append(buildingManager.GetMemoryReportLine());
 
         sb.Append(" unityAllocMB=").Append(BytesToMb(Profiler.GetTotalAllocatedMemoryLong()).ToString("F1"));
+        sb.Append(" monoHeapMB=").Append(BytesToMb(Profiler.GetMonoHeapSizeLong()).ToString("F1"));
         sb.Append(" monoUsedMB=").Append(BytesToMb(Profiler.GetMonoUsedSizeLong()).ToString("F1"));
 
         Debug.Log(sb.ToString());
@@ -51,7 +52,7 @@ public static class WebGLMemoryDiagnostics
     {
         long bytes = 0;
         bytes += (long)mesh.vertexCount * 32;
-        bytes += (long)mesh.triangles.Length * 4;
+        bytes += (long)mesh.GetIndexCount(0) * 4;  // triangles 게터는 배열 복사 발생
         return bytes;
     }
 
