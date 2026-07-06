@@ -21,9 +21,12 @@ public class MinimapColorController : MonoBehaviour
 
     [Header("BlackOut Style")]
     [SerializeField] private Color blackoutColor = new Color(0.2f, 0.2f, 0.2f, 0.9f);
+    [SerializeField] private Color completedBlackoutColor = new Color(0.1f, 0.6f, 0.1f, 0.9f);
 
     private readonly Dictionary<DistrictType, Color> districtCurrentColor =
         new Dictionary<DistrictType, Color>();
+    private readonly HashSet<DistrictType> completedBlackoutDistricts =
+        new HashSet<DistrictType>();
 
     private readonly List<OniRangeData> oniRangeEntries = new List<OniRangeData>();
     private readonly Dictionary<DistrictType, double> predictGuConsumption =
@@ -101,7 +104,10 @@ public class MinimapColorController : MonoBehaviour
     {
         _isSimulationOn = isOn;
         if (!isOn)
+        {
             StopBlinkAndRestore();
+            completedBlackoutDistricts.Clear();
+        }
     }
 
     private void HandlePowerDataUpdated(PowerGridData data)
@@ -254,7 +260,8 @@ public class MinimapColorController : MonoBehaviour
             blackoutBlinkCoroutine = null;
         }
 
-        minimapManager.SetDistrictColor(blinkingDistrictType, blackoutColor);
+        completedBlackoutDistricts.Add(blinkingDistrictType);
+        minimapManager.SetDistrictColor(blinkingDistrictType, completedBlackoutColor);
     }
 
     private void StopBlinkAndRestore()
