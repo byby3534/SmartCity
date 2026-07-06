@@ -24,7 +24,10 @@
 
 ## 🎬 시연
 
-<!-- 시연 영상 또는 GIF 삽입 -->
+### 구 선택 및 건물 스폰 (Lazy Loading)
+
+https://github.com/user-attachments/assets/30b824d8-86dc-4961-bdc4-6c6c07c1b1c0
+
 > WebGL 빌드 배포 링크: [바로가기](https://elninoenergyrisksimulation.duckdns.org/)
 
 ---
@@ -169,14 +172,6 @@ Assets/Scripts/
 │   ├── Cesium/          Cesium 크레딧 숨김 처리
 │   ├── Diagnostics/     WebGL 메모리 진단
 │   ├── Managers/        구역·건물·전력망 매니저
-
-https://github.com/user-attachments/assets/1cbda0ba-62a5-4ce1-a0a2-c2808e8e985f
-
-
-
-https://github.com/user-attachments/assets/8edd404e-5d22-4b50-a584-22addad75950
-
-
 │   ├── Objects/         건물·구역 오브젝트
 │   └── Simulation/      정전 시뮬레이션, 카메라 컨트롤러
 ├── Data/
