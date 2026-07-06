@@ -83,6 +83,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import traceback # 추가
 from datetime import datetime # 추가
 
@@ -90,6 +91,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.json.sort_keys = False   # dict 삽입 순서 유지 (building_type score 내림차순 등)
+CORS(app)
 
 # ---------------------------------------------------------------------------
 # 모델/파라미터 로드 (서버 기동 시 1회)
