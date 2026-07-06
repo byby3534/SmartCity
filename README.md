@@ -28,6 +28,10 @@
 
 https://github.com/user-attachments/assets/30b824d8-86dc-4961-bdc4-6c6c07c1b1c0
 
+### 순환정전 시뮬레이션
+
+https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
+
 > WebGL 빌드 배포 링크: [바로가기](https://elninoenergyrisksimulation.duckdns.org/)
 
 ---
