@@ -42,6 +42,7 @@ public class MainCameraController : MonoBehaviour
         new Dictionary<DistrictType, double2>();
 
     public event Action OnEndFlyEnded;
+    public bool IsFlying => isFlying;
 
     private void Awake()
     {
@@ -86,16 +87,12 @@ public class MainCameraController : MonoBehaviour
             return;
         }
         
-        minimapManager.OnDistrictSelected += MoveToClickedDistrict;
         simulationController.OnBlackoutDistrictChanged += MoveToBlackoutDistrict;
         simulationController.OnBlackoutSimulationToggled += HandleSimulationToggled;
     }
 
     private void OnDisable()
     {
-        if (minimapManager != null)
-            minimapManager.OnDistrictSelected -= MoveToClickedDistrict;
-
         if (simulationController != null)
         {
             simulationController.OnBlackoutDistrictChanged -= MoveToBlackoutDistrict;
@@ -154,20 +151,7 @@ public class MainCameraController : MonoBehaviour
         }
     }
 
-    // 모드 1. 시뮬레이션 ❌: 구 클릭 가능 -> 클릭된 구로 카메라 이동
-    public void MoveToClickedDistrict(DistrictType districtType)
-    {
-        // 토글 ON이면 구 클릭으로 카메라 이동 금지
-        if (_isSimulationOn)
-        {
-            Debug.Log("[MainCameraController] 시뮬레이션 ON 상태이므로 구 클릭 카메라 이동 비활성화");
-            return;
-        }
-
-        MoveToDistrict(districtType);
-    }
-
-    // 모드 2. 시뮬레이션 ⭕️: 구 클릭 이동 안됨 / 정전 순회 중인 구로 카메라 이동
+    // 모드 2. 시뮬레이션 ⭕️: 정전 순회 중인 구로 카메라 이동
     public void MoveToBlackoutDistrict(DistrictType districtType)
     {
         MoveToDistrict(districtType);

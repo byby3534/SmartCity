@@ -3,8 +3,9 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Panel_ONI_Adjust/Panel_4 — ONI 슬라이더 조작 시 연/월 선택 직후 기준값(baseline) 대비
-/// 온도·전력 사용량·전력 공급량 변화량과 현재 예비율을 보여준다.
+/// Panel_ONI_Adjust/Panel_4 — /oni로 받은 실제 ONI를 baseline으로 삼고,
+/// /predict/oni_range 캐시에서 현재 슬라이더 ONI의 변화량을 표시한다.
+/// 온도·사용·공급은 baseline 대비 delta, 예비율은 oni_range 절대값.
 /// </summary>
 public class OniImpactPanel : MonoBehaviour
 {
@@ -18,7 +19,7 @@ public class OniImpactPanel : MonoBehaviour
     [SerializeField] private TMP_Text energySupplyRatioText;
     [SerializeField] private TMP_Text reserveRateRatioText;
 
-    private readonly List<OniRangeData> _oniRangeEntries = new();
+    private readonly List<OniRangeData> _entries = new();
     private OniRangeData _baseline;
 
     private void Awake()
@@ -30,6 +31,16 @@ public class OniImpactPanel : MonoBehaviour
 
         ResolveReferences();
         WarnMissingReferences();
+        ResetToZero();
+
+        if (uiController != null)
+            uiController.OnDateSelected += HandleDateSelected;
+    }
+
+    private void OnDestroy()
+    {
+        if (uiController != null)
+            uiController.OnDateSelected -= HandleDateSelected;
     }
 
     private void WarnMissingReferences()
@@ -59,8 +70,8 @@ public class OniImpactPanel : MonoBehaviour
         if (uiController != null)
             uiController.OnOniValueChanged += HandleOniValueChanged;
 
-        if (_oniRangeEntries.Count > 0 && uiController != null)
-            HandleOniValueChanged(uiController.GetCurrentOni());
+        if (_baseline == null)
+            ResetToZero();
     }
 
     private void OnDisable()
@@ -72,30 +83,54 @@ public class OniImpactPanel : MonoBehaviour
             uiController.OnOniValueChanged -= HandleOniValueChanged;
     }
 
-    // 연/월 선택 → /predict/oni_range 도착 시점 — 슬라이더 초기값을 기준값(baseline)으로 고정한다.
+    private void HandleDateSelected(string year, string month)
+    {
+        ClearState();
+        ResetToZero();
+    }
+
     private void HandleOniRangeDataUpdated(List<OniRangeData> data)
     {
-        _oniRangeEntries.Clear();
-        _baseline = null;
+        ClearState();
 
         if (data == null || data.Count == 0)
+        {
+            ResetToZero();
             return;
+        }
 
-        _oniRangeEntries.AddRange(data);
-
-        float oni = uiController != null ? uiController.GetCurrentOni() : 0f;
-        _baseline = GetClosestOniEntry(oni);
-
+        _entries.AddRange(data);
+        _baseline = FindClosest(uiController != null ? uiController.GetCurrentOni() : 0f);
         ApplyEntry(_baseline);
     }
 
-    // 슬라이더 드래그 중 — 기준값(baseline) 대비 변화량을 갱신한다.
     private void HandleOniValueChanged(float oniValue)
     {
-        if (_baseline == null || _oniRangeEntries.Count == 0)
+        if (_baseline == null || _entries.Count == 0)
             return;
 
-        ApplyEntry(GetClosestOniEntry(oniValue));
+        ApplyEntry(FindClosest(oniValue));
+    }
+
+    private void ClearState()
+    {
+        _entries.Clear();
+        _baseline = null;
+    }
+
+    private void ResetToZero()
+    {
+        if (temperatureRatioText != null)
+            temperatureRatioText.text = "0.0°C";
+        if (energyUsageRatioText != null)
+            energyUsageRatioText.text = "0.00%";
+        if (energySupplyRatioText != null)
+            energySupplyRatioText.text = "0.00%";
+        if (reserveRateRatioText != null)
+        {
+            reserveRateRatioText.text = "0.0%";
+            reserveRateRatioText.color = Color.white;
+        }
     }
 
     private void ApplyEntry(OniRangeData entry)
@@ -106,6 +141,7 @@ public class OniImpactPanel : MonoBehaviour
         float temperatureDelta = entry.seoulTemperature - _baseline.seoulTemperature;
         float usageDelta = PercentDelta(entry.seoulTotalConsumption, _baseline.seoulTotalConsumption);
         float supplyDelta = PercentDelta(entry.supplyPower, _baseline.supplyPower);
+        float reserveRate = Mathf.Max(0f, entry.reserveRate);
 
         if (temperatureRatioText != null)
             temperatureRatioText.text = $"{temperatureDelta:+0.0;-0.0;0.0}°C";
@@ -115,7 +151,6 @@ public class OniImpactPanel : MonoBehaviour
             energySupplyRatioText.text = $"{supplyDelta:+0.00;-0.00;0.00}%";
         if (reserveRateRatioText != null)
         {
-            float reserveRate = Mathf.Max(0f, entry.reserveRate);
             reserveRateRatioText.text = $"{reserveRate:F1}%";
             reserveRateRatioText.color = ReserveRateStagePalette.GetSegmentColor(
                 ReserveRateStagePalette.ToLevel(reserveRate));
@@ -130,19 +165,19 @@ public class OniImpactPanel : MonoBehaviour
         return (current - baseline) / baseline * 100f;
     }
 
-    private OniRangeData GetClosestOniEntry(float oniValue)
+    private OniRangeData FindClosest(float oniValue)
     {
         OniRangeData closest = null;
         float minDistance = float.MaxValue;
 
-        foreach (OniRangeData data in _oniRangeEntries)
+        foreach (OniRangeData entry in _entries)
         {
-            float distance = Mathf.Abs(data.oni - oniValue);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = data;
-            }
+            float distance = Mathf.Abs(entry.oni - oniValue);
+            if (distance >= minDistance)
+                continue;
+
+            minDistance = distance;
+            closest = entry;
         }
 
         return closest;

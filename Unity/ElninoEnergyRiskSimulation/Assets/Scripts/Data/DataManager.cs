@@ -10,6 +10,7 @@ public class DataManager : MonoBehaviour
     [Header("API 연동")]
     [SerializeField] private ApiClient apiClient;
     [SerializeField] private UIController uiController;
+    [SerializeField] private BuildingManager buildingManager;
 
     public event Action<PowerGridData> OnPowerDataUpdated;
     public event Action<DistrictData> OnDistrictDataUpdated;
@@ -28,6 +29,7 @@ public class DataManager : MonoBehaviour
     // 현재 선택된 연월 (슬라이더 재호출 시 사용)
     private int _currentYear;
     private int _currentMonth;
+    private List<OniRangeData> _latestOniRangeData;
 
     private static readonly WaitForSeconds SliderDelay = new WaitForSeconds(0.15f);
     private Coroutine _sliderCoroutine;
@@ -42,6 +44,7 @@ public class DataManager : MonoBehaviour
     {
         SceneRefs.EnsureOn(ref apiClient, gameObject);
         SceneRefs.Resolve(ref uiController);
+        SceneRefs.Resolve(ref buildingManager);
     }
 
     private void Start()
@@ -78,6 +81,14 @@ public class DataManager : MonoBehaviour
             StopCoroutine(_powerCoroutine);
             _powerCoroutine = null;
         }
+    }
+
+    public void ReplayLatestOniRangeData()
+    {
+        if (_latestOniRangeData == null || _latestOniRangeData.Count == 0)
+            return;
+
+        OniRangeDataUpdated?.Invoke(new List<OniRangeData>(_latestOniRangeData));
     }
 
     // 드롭다운 변경 → /oni && /predict/oni_range 병렬 호출, /oni 완료 후 /predict 순차 호출
@@ -180,6 +191,9 @@ public class DataManager : MonoBehaviour
 
     IEnumerator LoadOnDateSelected(int year, int month)
     {
+        buildingManager?.ResetApiLoadedState();
+        _latestOniRangeData = null;
+
         // /oni && /predict/oni_range 병렬 시작
         Debug.Log($"[DataManager] /oni && /predict/oni_range 병렬 호출 ({year}-{month})");
 
@@ -215,31 +229,33 @@ public class DataManager : MonoBehaviour
             isRangeLoaded = true;
         });
 
-        // /oni 완료 대기
-        yield return new WaitUntil(() => isOniLoaded);
+        // /oni 와 /predict/oni_range 모두 완료될 때까지 대기
+        yield return new WaitUntil(() => isOniLoaded && isRangeLoaded);
 
         if (fetchedOni == null)
         {
             Debug.LogError("[DataManager] ONI값을 가져오지 못했습니다.");
-            yield return new WaitUntil(() => isRangeLoaded);
             yield break;
         }
 
-        // 슬라이더 초기화 (ONI 값으로)
+        if (_latestOniRangeData == null || _latestOniRangeData.Count == 0)
+        {
+            Debug.LogError("[DataManager] OniRange 데이터가 비어 있습니다.");
+            yield break;
+        }
+
+        // 슬라이더 초기화 (ONI 값으로) — oni_range 준비 후 패널 표시
         if (uiController == null)
         {
             Debug.LogError("[DataManager] UIController가 연결되지 않아 ONI 슬라이더를 표시할 수 없습니다.");
-            yield return new WaitUntil(() => isRangeLoaded);
             yield break;
         }
 
         uiController.InitSlider(fetchedOni.Value);
+        ReplayLatestOniRangeData();
 
         // /oni 완료 후 /predict 순차 호출
         yield return StartCoroutine(LoadPredictOnly(year, month, fetchedOni.Value));
-
-        // oni_range도 완료될 때까지 대기 (이미 됐으면 즉시 통과)
-        yield return new WaitUntil(() => isRangeLoaded);
     }
 
     IEnumerator LoadPredictOnly(int year, int month, float oniValue)
@@ -484,6 +500,7 @@ public class DataManager : MonoBehaviour
         }
 
         // 파싱된 전체 범위 데이터 리스트를 이벤트로 방송 (차트 매니저 등에서 활용)
+        _latestOniRangeData = rangeDataList;
         OniRangeDataUpdated?.Invoke(rangeDataList);
     }
 

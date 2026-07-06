@@ -542,6 +542,10 @@ public class MinimapManager : MonoBehaviour
             return;
         }
 
+        // 구 전환 카메라 이동 중 클릭 무시
+        if (mainCameraController != null && mainCameraController.IsFlying)
+            return;
+
         // 현재 구 상태 변경 전 이전 선택 구 상태 변경
         // : 이전 선택된 구 아웃라인 -> 원래 색으로
         ResetSelectedDistrictOutline();
