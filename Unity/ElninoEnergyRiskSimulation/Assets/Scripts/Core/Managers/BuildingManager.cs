@@ -759,6 +759,7 @@ public class BuildingManager : MonoBehaviour
         yield return null;
 
         WebGLMemoryDiagnostics.LogSnapshot($"activate-{districtType}", this);
+        _activationCoroutine = null;
     }
 
     private void HandleActiveDistrictsChanged(DistrictType current, DistrictType next)
