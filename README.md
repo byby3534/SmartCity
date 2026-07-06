@@ -5,7 +5,7 @@
 [![Unity](https://img.shields.io/badge/Unity-6000.3.18f1-black?logo=unity)](https://unity.com)
 [![WebGL](https://img.shields.io/badge/Deploy-WebGL-blue)](https://elninoenergyrisksimulation.duckdns.org/)
 [![Team](https://img.shields.io/badge/Team-4명-green)]()
-[![Period](https://img.shields.io/badge/2026.06_~_2026.07-1개월-orange)]()
+[![Period](https://img.shields.io/badge/2026.06.22_~_2026.07.07-2주-orange)]()
 
 ---
 
@@ -15,7 +15,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| 개발 기간 | 2026.06 ~ 2026.07 (약 1개월) |
+| 개발 기간 | 2026.06.22 ~ 2026.07.07 (약 2주) |
 | 팀 구성 | 4명 (본인: 렌더링·시뮬레이션·데이터 구조 담당) |
 | 빌드 환경 | Unity 6000.3.18f1 / WebGL 배포 |
 | 데이터 | 서울시 공공 API (기상, 전력 예비율, 구별 건물 데이터) |
