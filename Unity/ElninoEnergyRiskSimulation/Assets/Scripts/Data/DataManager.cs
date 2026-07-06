@@ -30,6 +30,7 @@ public class DataManager : MonoBehaviour
     private int _currentYear;
     private int _currentMonth;
     private List<OniRangeData> _latestOniRangeData;
+    private int _dateLoadGeneration;
 
     private static readonly WaitForSeconds SliderDelay = new WaitForSeconds(0.15f);
     private Coroutine _sliderCoroutine;
@@ -91,7 +92,7 @@ public class DataManager : MonoBehaviour
         OniRangeDataUpdated?.Invoke(new List<OniRangeData>(_latestOniRangeData));
     }
 
-    // 드롭다운 변경 → /oni && /predict/oni_range 병렬 호출, /oni 완료 후 /predict 순차 호출
+    // 드롭다운 변경 → /oni 후 /predict 즉시, /predict/oni_range는 백그라운드
     private void HandleDateSelected(string year, string month)
     {
         _currentYear  = SafeStringToInt(year);
@@ -193,16 +194,34 @@ public class DataManager : MonoBehaviour
     {
         buildingManager?.ResetApiLoadedState();
         _latestOniRangeData = null;
+        int loadId = ++_dateLoadGeneration;
 
-        // /oni && /predict/oni_range 병렬 시작
-        Debug.Log($"[DataManager] /oni && /predict/oni_range 병렬 호출 ({year}-{month})");
+        Debug.Log($"[DataManager] /oni → /predict ({year}-{month}), /predict/oni_range 백그라운드");
 
         float? fetchedOni = null;
-        bool isOniLoaded  = false;
-        bool isRangeLoaded = false;
+        bool isOniLoaded = false;
+
+        apiClient.FetchOniRange(year, month, (rangeData) =>
+        {
+            if (loadId != _dateLoadGeneration)
+                return;
+
+            if (rangeData != null)
+            {
+                ParseOniRangeData(rangeData);
+                Debug.Log("[DataManager] OniRange 파싱 완료 (background)");
+            }
+            else
+            {
+                Debug.LogError("[DataManager] OniRange API 응답 Null");
+            }
+        });
 
         apiClient.FetchOni(year, month, (data) =>
         {
+            if (loadId != _dateLoadGeneration)
+                return;
+
             try
             {
                 if (data?["output"]?["oni"] != null)
@@ -215,22 +234,10 @@ public class DataManager : MonoBehaviour
             isOniLoaded = true;
         });
 
-        apiClient.FetchOniRange(year, month, (rangeData) =>
-        {
-            if (rangeData != null)
-            {
-                ParseOniRangeData(rangeData);
-                Debug.Log("[DataManager] OniRange 파싱 완료");
-            }
-            else
-            {
-                Debug.LogError("[DataManager] OniRange API 응답 Null");
-            }
-            isRangeLoaded = true;
-        });
+        yield return new WaitUntil(() => isOniLoaded);
 
-        // /oni 와 /predict/oni_range 모두 완료될 때까지 대기
-        yield return new WaitUntil(() => isOniLoaded && isRangeLoaded);
+        if (loadId != _dateLoadGeneration)
+            yield break;
 
         if (fetchedOni == null)
         {
@@ -238,13 +245,6 @@ public class DataManager : MonoBehaviour
             yield break;
         }
 
-        if (_latestOniRangeData == null || _latestOniRangeData.Count == 0)
-        {
-            Debug.LogError("[DataManager] OniRange 데이터가 비어 있습니다.");
-            yield break;
-        }
-
-        // 슬라이더 초기화 (ONI 값으로) — oni_range 준비 후 패널 표시
         if (uiController == null)
         {
             Debug.LogError("[DataManager] UIController가 연결되지 않아 ONI 슬라이더를 표시할 수 없습니다.");
@@ -252,9 +252,7 @@ public class DataManager : MonoBehaviour
         }
 
         uiController.InitSlider(fetchedOni.Value);
-        ReplayLatestOniRangeData();
 
-        // /oni 완료 후 /predict 순차 호출
         yield return StartCoroutine(LoadPredictOnly(year, month, fetchedOni.Value));
     }
 
