@@ -92,6 +92,50 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 
 ---
 
+## 🔄 렌더링 파이프라인
+
+```mermaid
+flowchart TD
+    subgraph BAKING["빌드 전 · BAKING"]
+        GeoJSON["GeoJSON\n600MB 건물 데이터"]
+        Parser["DataParser.cs\nJsonTextReader 스트리밍"]
+        Baker["DataBaker.cs\n인스턴스 · 폴리곤 베이킹"]
+        TerrainBaker["BakeTerrainHeightsWindow.cs\nCesium SampleHeight"]
+        DistrictBytes["District.bytes\n건물 위경도 · 높이"]
+        PolygonBytes["PolygonData.bytes\n전체 폴리곤 좌표"]
+        TerrainBytes["TerrainHeights.bytes\n구별 지형 고도"]
+
+        GeoJSON -->|스트리밍 파싱| Parser
+        Parser --> Baker
+        Parser --> TerrainBaker
+        Baker --> DistrictBytes
+        Baker --> PolygonBytes
+        TerrainBaker --> TerrainBytes
+    end
+
+    subgraph RUNTIME["런타임 · RUNTIME"]
+        CPP["SeoulBuildingProcessor · C++ Native Plugin\nBuildDistrictMesh() — EarClipping · 벽면/지붕 생성\nbuildingBuffer + polygonPointsBuffer + terrainHeights"]
+        Mesh["Unity Mesh\n구 단위 통합 메시 · 드로우콜 25개 고정\nUV2.x = buildingId 내장"]
+        RenderBuf["BuildingRenderData[]\nreductionValue · isBlackout\nC++ 포인터 직접 전달"]
+        Tex["Texture2D\nRGHalf · 16384×N\n_BuildingDataTex"]
+        Shader["URP Shader\nUV2.x → _BuildingDataTex 샘플링"]
+        Output["화면 출력\n히트맵 · 정전 연출"]
+
+        CPP -->|buildingId 각 버텍스에 내장| Mesh
+        CPP -->|renderingBuffer| RenderBuf
+        RenderBuf --> Tex
+        Mesh --> Shader
+        Tex --> Shader
+        Shader --> Output
+    end
+
+    DistrictBytes -->|buildingBuffer| CPP
+    PolygonBytes -->|polygonPointsBuffer| CPP
+    TerrainBytes -->|NativeArray float| CPP
+```
+
+---
+
 ## ⚙️ 기술적 도전과 해결
 
 ### 문제 1 — 서울시 건물 수만큼 오브젝트를 생성하면 씬이 못버팀
