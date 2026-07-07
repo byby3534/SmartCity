@@ -84,6 +84,8 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 │   ├── DataBaker.cs     빌드 전 메시 데이터 사전 베이킹 시스템
 │   ├── DataManager.cs   공공 API 수집 데이터 관리 구조
 │   └── DataParser.cs    600MB GeoJSON 스트리밍 파싱
+├── Editor/
+│   └── BakeTerrainHeightsWindow.cs   베이킹 에디터 툴 (Tools > Bake Terrain Heights)
 └── Core/Diagnostics/
     └── WebGLMemoryDiagnostics — WebGL OOM 모니터링
 ```
@@ -92,7 +94,7 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 
 ## ⚙️ 기술적 도전과 해결
 
-### 문제 1 — 서울시 건물 수만큼 오브젝트를 생성하면 씬이 버팀
+### 문제 1 — 서울시 건물 수만큼 오브젝트를 생성하면 씬이 못버팀
 
 서울시 전체 건물 수를 개별 오브젝트로 생성하면 드로우콜과 메모리가 폭발적으로 증가했습니다.
 
@@ -171,6 +173,17 @@ WebGL 환경은 메모리 제한이 엄격해, 25개 구를 모두 스폰하면 
 ## 📁 프로젝트 구조
 
 ```
+SeoulBuildingProcessor/                   ← C++ Native Plugin 소스
+├── SeoulBuildingProcessor.cpp            건물 메시 생성, EarClipping 삼각분할, 렌더링 버퍼 관리
+├── pch.h                                 프리컴파일 헤더 (Windows)
+├── build_webgl.ps1 / build_webgl.sh      WebGL(.a/.o) 빌드 스크립트
+└── build_mac.sh                          macOS(.bundle) 빌드 스크립트
+
+Assets/Plugins/                           ← 플랫폼별 빌드 결과물
+├── x86_64/SeoulBuildingProcessor.dll     Windows (에디터·스탠드얼론)
+├── WebGL/SeoulBuildingProcessor.a/.o     WebGL 정적 라이브러리
+└── macOS/SeoulBuildingProcessor.bundle   macOS
+
 Assets/Scripts/
 ├── Core/
 │   ├── Cesium/          Cesium 크레딧 숨김 처리
@@ -184,6 +197,8 @@ Assets/Scripts/
 │   ├── DataBaker.cs     메시 데이터 베이킹
 │   ├── DataManager.cs   데이터 통합 관리
 │   └── DataParser.cs    JSON 파싱
+├── Editor/
+│   └── BakeTerrainHeightsWindow.cs   지형 높이 베이킹 에디터 툴
 ├── UI/
 │   ├── MiniMap/         미니맵 (Decal 기반 구 경계)
 │   ├── Panel_Blackout/  정전 게이지 및 예비율 UI
