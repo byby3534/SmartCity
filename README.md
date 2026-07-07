@@ -95,7 +95,7 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 ## 🔄 렌더링 파이프라인
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph BAKING["빌드 전 · BAKING"]
         GeoJSON["GeoJSON\n600MB 건물 데이터"]
         Parser["DataParser.cs\nJsonTextReader 스트리밍"]
