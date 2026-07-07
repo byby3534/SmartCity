@@ -95,8 +95,9 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 ## 🔄 렌더링 파이프라인
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph BAKING["빌드 전 · BAKING"]
+        direction LR
         GeoJSON["GeoJSON\n600MB 건물 데이터"]
         Parser["DataParser.cs\nJsonTextReader 스트리밍"]
         Baker["DataBaker.cs\n인스턴스 · 폴리곤 베이킹"]
@@ -114,6 +115,7 @@ flowchart LR
     end
 
     subgraph RUNTIME["런타임 · RUNTIME"]
+        direction LR
         CPP["SeoulBuildingProcessor · C++ Native Plugin\nBuildDistrictMesh() — EarClipping · 벽면/지붕 생성\nbuildingBuffer + polygonPointsBuffer + terrainHeights"]
         Mesh["Unity Mesh\n구 단위 통합 메시 · 드로우콜 25개 고정\nUV2.x = buildingId 내장"]
         RenderBuf["BuildingRenderData[]\nreductionValue · isBlackout\nC++ 포인터 직접 전달"]
