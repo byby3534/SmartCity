@@ -63,7 +63,7 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 |------|-----------|
 | 엔진 | Unity 6000.3.18f1 (Unity 6) |
 | 언어 | C#, C++ |
-| 렌더링 | GPU ComputeBuffer, Texture2D, URP Shader, Cesium for Unity, Decal |
+| 렌더링 | Texture2D, URP Shader, Cesium for Unity, Decal |
 | 데이터 | 서울시 공공 API, GeoJSON 스트리밍 파싱, 스트리밍 에셋 |
 | 성능 | C++ Native Plugin, Data Baking, Lazy Loading, DOD(Data-Oriented Design) |
 | 배포 | WebGL Build |
@@ -76,6 +76,9 @@ https://github.com/user-attachments/assets/79c52092-5809-40cc-b108-589bd850f874
 팀 4명 중 **렌더링 파이프라인 및 시뮬레이션 로직** 전담
 
 ```
+SeoulBuildingProcessor/    C++ Native Plugin 소스 — EarClipping 삼각분할, 벽면·지붕 메시 생성
+Assets/Plugins/            플랫폼별 빌드 산출물 (x86_64 .dll · WebGL .a/.o · macOS .bundle)
+Assets/Scripts/
 ├── Core/
 │   ├── Objects/         건물·구역 오브젝트 설계 (BuildingObject, DistrictObject)
 │   ├── Managers/        DistrictManager, BuildingManager, PowerGridManager
@@ -158,7 +161,7 @@ flowchart TD
 서울시 건물 데이터 GeoJSON 파일이 약 **600MB**로, `File.ReadAllText()`로 전체를 한 번에 읽으면 메모리 부족으로 앱이 종료됐습니다.
 
 **해결: 스트리밍 파싱 (`DataParser.cs`)**
-- `JsonTextReader`를 활용해 파일을 메모리에 올리지 않고 **스트림으로 한 줄씩 읽는** 방식으로 전환
+- `JsonTextReader`를 활용해 파일을 메모리에 올리지 않고 **피처(JSON 객체) 단위로 순차 파싱 후 즉시 폐기**하는 방식으로 전환 (파일 크기와 무관하게 항상 일정한 메모리만 사용)
 - `features` 배열만 탐색해 필요한 건물 데이터만 추출, 불필요한 GeoJSON 메타데이터는 읽지 않고 스킵
 - 파싱 중 유효하지 않은 폴리곤(크기 2m 미만) 필터링으로 처리 대상 건물 수도 함께 감소
 
@@ -170,8 +173,8 @@ flowchart TD
 
 **해결: Data Baking**
 - 건물의 위치·높이는 변하지 않는 **정적 데이터**라는 점에 착안
-- 빌드 전 에디터 툴로 메시 연산 결과를 `.bytes` 파일로 미리 베이킹하여 스트리밍 에셋에 저장
-- 런타임에는 연산 없이 파일을 읽어 메시를 복원
+- 빌드 전 에디터 툴로 메시 생성에 필요한 원본 데이터(건물 위경도·높이·폴리곤 좌표·지형 고도)를 `.bytes` 파일로 미리 가공해 스트리밍 에셋에 저장
+- 런타임에는 파싱·전처리 없이 파일을 그대로 읽어 C++ 버퍼에 적재 (단, EarClipping 등 실제 메시 계산 자체는 여전히 런타임에 수행)
 - **결과:** 구당 로딩 2~3초 → 25개 구 전체 **1분 미만**으로 단축
 
 ```
@@ -195,11 +198,11 @@ Resources/Districts/
 
 ### 문제 4 — C++ Native Plugin 도입: EarClipping 삼각분할 성능 확보
 
-서울시 건물은 각기 다른 불규칙 폴리곤 형태를 가지고 있어 메시 생성 시 삼각분할(EarClipping)이 필요합니다. 수만 개의 건물에 대해 C# managed 코드로 EarClipping을 수행하면 속도가 크게 부족했습니다.
+서울시 건물은 각기 다른 불규칙 폴리곤 형태를 가지고 있어 메시 생성 시 삼각분할(EarClipping)이 필요합니다. 수만 개의 건물에 대해 C#으로 EarClipping을 수행하면, GC가 대량 객체를 추적하며 발생하는 정지 비용과 배열 경계 검사 오버헤드가 누적되어 속도가 크게 부족했습니다.
 
 **해결: C++ Native Plugin (`SeoulBuildingProcessor.dll`)**
 - EarClipping 삼각분할 및 벽면·지붕 메시 생성 연산을 C++ 네이티브 레이어로 이관
-- 건물 렌더링 상태(`reductionValue`, `isBlackout`)를 C++ 벡터로 관리하고 **포인터를 직접 ComputeBuffer에 전달**하여 C# GC 개입 최소화
+- 건물 렌더링 상태(`reductionValue`, `isBlackout`)를 C++ 벡터로 관리하고 **포인터를 C#에 직접 전달**하여 초기 대량 할당에 의한 GC 압박 최소화
 - Cesium에서 측정한 지형 고도(`TerrainHeights.bytes`)를 받아 건물 메시에 실시간 반영
 
 ---
@@ -213,6 +216,17 @@ WebGL 환경은 메모리 제한이 엄격해, 25개 구를 모두 스폰하면 
 - 메시 처리 시 `new` 할당 반복을 없애고, **미리 생성한 버퍼 변수를 재사용**하도록 리팩터링하여 GC 압박 감소
 - C++ 벡터 기반 버퍼 관리로 C# GC 트리거 자체를 줄여 WebGL 환경 안정화에 기여
 - `WebGLMemoryDiagnostics`로 런타임 메모리 사용량을 모니터링하며 안정화
+
+---
+
+### 문제 6 — WebGL은 ComputeBuffer(SSBO) 미지원
+
+건물 상태(`reductionValue`, `isBlackout`)를 초기엔 **ComputeBuffer**로 셰이더에 전달하려 했으나, WebGL(OpenGL ES 3.0 기반)은 SSBO(Shader Storage Buffer)를 지원하지 않아 이 방식 자체가 불가능했습니다.
+
+**해결: Texture2D(RGHalf, 16384×N)로 인코딩**
+- R채널 = `reductionValue`, G채널 = `isBlackout`로 건물 상태를 텍스처에 인코딩
+- **buildingId → 텍스처 좌표 변환**: 메시 생성 시 정점의 UV2.x에 건물의 버퍼 인덱스(`buildingId`)를 심어두고, 셰이더에서 이 인덱스를 2D 텍셀 좌표로 환산해 `tex2D` 샘플링 — SSBO의 인덱스 접근을 텍스처 주소 연산으로 대체
+- `GetRawTextureData`로 변경된 건물의 픽셀만 부분 업데이트해 전체 재업로드 없이 효율화
 
 ---
 
